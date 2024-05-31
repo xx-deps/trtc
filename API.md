@@ -18,8 +18,10 @@
 | [switchRole](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/switchRole.html) | Switches roles. This API works only in live streaming scenarios（TRTC_APP_SCENE_LIVE and TRTC_APP_SCENE_VOICE_CHATROOM）  |
 | [setDefaultStreamRecvMode](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/setDefaultStreamRecvMode.html) | Sets the audio/video data receiving mode, which must be set before room entry to take effect.                           |
 | [connectOtherRoom](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/connectOtherRoom.html) | Requests a cross-room call so that two different rooms can share audio and video streams (e.g., "anchor PK" scenarios). |
-| [disconnectOtherRoom](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/disconnectOtherRoom.html) | Exits a cross-room call.                                                                                                |
-| [switchRoom](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/switchRoom.html) | Switches rooms.                                                                                                                   |
+| [disconnectOtherRoom](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/disconnectOtherRoom.html) | Exits a cross-room call.                                                 |
+| [switchRoom](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/switchRoom.html) | Switches rooms.                                                                    |
+| [createSubCloud](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/createSubCloud.html)  | Create room subinstance (for concurrent multi-room listen/watch)                          |
+| [destroySubCloud](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud/TRTCCloud/destroySubCloud.html) |  Terminate room subinstance            |
 
 
 
@@ -348,7 +350,7 @@ Callback APIs for the TRTC video call feature
 
 ## Definitions of Key Classes
 
-| 类名                                                        | Description                            |
+|  API                                                       | Description                            |
 | ----------------------------------------------------------- |-------------------------------|
 | [TRTCCloudDef](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud_def/TRTCCloudDef-class.html) | Key class definition variable   |
 | [TRTCParams](https://liteav.sdk.qcloud.com/doc/product/trtc/dart/api/en/trtc_cloud_def/TRTCParams-class.html) | Room entry parameters    |

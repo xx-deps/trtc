@@ -497,7 +497,19 @@ void SDKManager::getAudioEffectManager(const flutter::MethodCall<flutter::Encoda
 };
 void SDKManager::startScreenCapture(const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-        //todo
+        auto methodParams = std::get<flutter::EncodableMap>(*method_call.arguments());
+        auto config = std::get<std::string>(methodParams[flutter::EncodableValue("encParams")]);
+        int streamType = std::get<int>(methodParams[flutter::EncodableValue("streamType")]);
+        Document configDo;
+        configDo.Parse(config.c_str());
+        TRTCVideoEncParam param;
+        param.videoResolution = static_cast<TRTCVideoResolution>(configDo["videoResolution"].GetInt());
+        param.resMode = static_cast<TRTCVideoResolutionMode>(configDo["videoResolutionMode"].GetInt());
+        param.videoFps = configDo["videoFps"].GetInt();
+        param.videoBitrate = configDo["videoBitrate"].GetInt();
+        param.minVideoBitrate = configDo["minVideoBitrate"].GetInt();
+        param.enableAdjustRes = configDo["enableAdjustRes"].GetBool();
+        trtc_cloud->startScreenCapture(nullptr, static_cast<TRTCVideoStreamType>(streamType), &param);
         result->Success(nullptr);
 };
 void SDKManager::stopScreenCapture(const flutter::MethodCall<flutter::EncodableValue> &method_call,
