@@ -1,3 +1,7 @@
+## 2.7.7
+### Bug Fix
+- Web: Fixed the issue where the switchRole call was invalid.
+
 ## 2.7.6
 ### Bug Fix
 - Windows: Fix the data upload issue in Window library.

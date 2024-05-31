@@ -41,7 +41,7 @@ class TrtcWrapper {
 
   external void switchCamera(arguments);
 
-  external void switchRoom(arguments);
+  external void switchRole(arguments);
 
   external void connectOtherRoom(arguments);
 
