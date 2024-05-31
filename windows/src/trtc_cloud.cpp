@@ -410,7 +410,6 @@ void SDKManager::setRemoteVideoRenderListener(const flutter::MethodCall<flutter:
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
         auto methodParams = std::get<flutter::EncodableMap>(*method_call.arguments());
         auto streamType = std::get<int>(methodParams[flutter::EncodableValue("streamType")]);
-        std::cout << "Value of streamType is : " << streamType << std::endl;
         auto userId = std::get<std::string>(methodParams[flutter::EncodableValue("userId")]).c_str();
         TRTCVideoStreamType stype = static_cast<TRTCVideoStreamType>(streamType);
         trtc_cloud->startRemoteView(userId, stype, nullptr);
@@ -495,6 +494,31 @@ void SDKManager::getAudioEffectManager(const flutter::MethodCall<flutter::Encoda
         audioEffectManager = trtc_cloud->getAudioEffectManager();
         result->Success(nullptr);
 };
+void SDKManager::getScreenCaptureSources(const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        auto methodParams = std::get<flutter::EncodableMap>(*method_call.arguments());
+        int thumbnailWidth = std::get<int>(methodParams[flutter::EncodableValue("thumbnailWidth")]);
+        int thumbnailHeight = std::get<int>(methodParams[flutter::EncodableValue("thumbnailHeight")]);
+        int iconWidth = std::get<int>(methodParams[flutter::EncodableValue("iconWidth")]);
+        int iconHeight = std::get<int>(methodParams[flutter::EncodableValue("iconHeight")]);
+        SIZE thumbnailSize = {thumbnailWidth, thumbnailHeight};
+        SIZE iconSize = {iconWidth, iconHeight};
+        ITRTCScreenCaptureSourceList *sourceList = trtc_cloud->getScreenCaptureSources(thumbnailSize, iconSize);
+        result->Success(SDKManager::ToEncodableValue(sourceList));
+}
+void SDKManager::selectScreenCaptureTarget(const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
+        auto methodParams = std::get<flutter::EncodableMap>(*method_call.arguments());
+        TRTCScreenCaptureSourceInfo sourceInfo = SDKManager::FromEncodableValue(methodParams[flutter::EncodableValue("sourceInfo")]);
+        TRTCScreenCaptureProperty property = SDKManager::FromEncodableValueProperty(methodParams[flutter::EncodableValue("property")]);
+        int captureTop = std::get<int>(methodParams[flutter::EncodableValue("captureTop")]);
+        int captureLeft = std::get<int>(methodParams[flutter::EncodableValue("captureLeft")]);
+        int captureRight = std::get<int>(methodParams[flutter::EncodableValue("captureRight")]);
+        int captureBottom = std::get<int>(methodParams[flutter::EncodableValue("captureBottom")]);
+        RECT captureRect = {captureLeft, captureTop, captureRight, captureBottom};
+        trtc_cloud->selectScreenCaptureTarget(sourceInfo, captureRect, property);
+        result->Success(nullptr);
+}
 void SDKManager::startScreenCapture(const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
         auto methodParams = std::get<flutter::EncodableMap>(*method_call.arguments());
@@ -881,4 +905,126 @@ void SDKManager::getApplicationMuteState(const flutter::MethodCall<flutter::Enco
         bool res = deviceManager->getApplicationMuteState();
         result->Success(flutter::EncodableValue(res));
 }
-} // namespace tim_sdk_flutter 
+
+flutter::EncodableValue SDKManager::ToEncodableValue(ITRTCScreenCaptureSourceList* list) {
+  flutter::EncodableMap result_map;
+
+  int32_t count = static_cast<int32_t>(list->getCount());
+  result_map[flutter::EncodableValue("count")] = flutter::EncodableValue(count);
+
+  flutter::EncodableList encodable_list;
+
+  for (int32_t i = 0; i < count; i++) {
+    TRTCScreenCaptureSourceInfo info = list->getSourceInfo(i);
+    flutter::EncodableValue encodable_value = SDKManager::ToEncodableValue(info);
+
+    encodable_list.push_back(encodable_value);
+  }
+
+  result_map[flutter::EncodableValue("sourceInfo")] = flutter::EncodableValue(encodable_list);
+  list->release();
+
+  return flutter::EncodableValue(result_map);
+}
+
+flutter::EncodableValue SDKManager::ToEncodableValue(const TRTCScreenCaptureSourceInfo& info) {
+  std::map<flutter::EncodableValue, flutter::EncodableValue> map;
+
+  map[flutter::EncodableValue("type")] = flutter::EncodableValue(static_cast<int>(info.type));
+  map[flutter::EncodableValue("sourceId")] = flutter::EncodableValue(static_cast<int64_t>(reinterpret_cast<intptr_t>(info.sourceId)));
+
+  std::string source_name_string(info.sourceName);
+  map[flutter::EncodableValue("sourceName")] = flutter::EncodableValue(source_name_string);
+
+  map[flutter::EncodableValue("thumbBGRA")] = ToEncodableValue(info.thumbBGRA);
+  map[flutter::EncodableValue("iconBGRA")] = ToEncodableValue(info.iconBGRA);
+  map[flutter::EncodableValue("isMinimizeWindow")] = flutter::EncodableValue(info.isMinimizeWindow);
+  map[flutter::EncodableValue("isMainScreen")] = flutter::EncodableValue(info.isMainScreen);
+  map[flutter::EncodableValue("x")] = flutter::EncodableValue(info.x);
+  map[flutter::EncodableValue("y")] = flutter::EncodableValue(info.y);
+
+  int32_t signed_width = static_cast<int32_t>(info.width);
+  int32_t signed_height = static_cast<int32_t>(info.height);
+
+  map[flutter::EncodableValue("width")] = flutter::EncodableValue(signed_width);
+  map[flutter::EncodableValue("height")] = flutter::EncodableValue(signed_height);
+
+  return flutter::EncodableValue(map);
+}
+
+flutter::EncodableValue SDKManager::ToEncodableValue(const TRTCImageBuffer& imageBuffer) {
+  std::map<flutter::EncodableValue, flutter::EncodableValue> map;
+
+  std::vector<uint8_t> buffer_vector(imageBuffer.buffer, imageBuffer.buffer + imageBuffer.length);
+  map[flutter::EncodableValue("buffer")] = flutter::EncodableValue(buffer_vector);
+
+  int32_t signed_length = static_cast<int32_t>(imageBuffer.length);
+  int32_t signed_width = static_cast<int32_t>(imageBuffer.width);
+  int32_t signed_height = static_cast<int32_t>(imageBuffer.height);
+
+  map[flutter::EncodableValue("length")] = flutter::EncodableValue(signed_length);
+  map[flutter::EncodableValue("width")] = flutter::EncodableValue(signed_width);
+  map[flutter::EncodableValue("height")] = flutter::EncodableValue(signed_height);
+
+  return flutter::EncodableValue(map);
+}
+
+TRTCScreenCaptureSourceInfo SDKManager::FromEncodableValue(const flutter::EncodableValue& value) {
+  TRTCScreenCaptureSourceInfo info;
+
+  const flutter::EncodableMap& map = std::get<flutter::EncodableMap>(value);
+
+  info.type = static_cast<TRTCScreenCaptureSourceType>(std::get<int>(map.at(flutter::EncodableValue("type"))));
+
+  info.sourceId = reinterpret_cast<TXView>(static_cast<intptr_t>(std::get<int>(map.at(flutter::EncodableValue("sourceId")))));
+
+  std::string source_name_string = std::get<std::string>(map.at(flutter::EncodableValue("sourceName")));
+  info.sourceName = source_name_string.c_str();
+
+  info.thumbBGRA = FromEncodableValueToBuffer(map.at(flutter::EncodableValue("thumbBGRA")));
+  info.iconBGRA = FromEncodableValueToBuffer(map.at(flutter::EncodableValue("iconBGRA")));
+
+  info.isMinimizeWindow = std::get<bool>(map.at(flutter::EncodableValue("isMinimizeWindow")));
+  info.isMainScreen = std::get<bool>(map.at(flutter::EncodableValue("isMainScreen")));
+
+  info.x = std::get<int>(map.at(flutter::EncodableValue("x")));
+  info.y = std::get<int>(map.at(flutter::EncodableValue("y")));
+
+  info.width = std::get<int>(map.at(flutter::EncodableValue("width")));
+  info.height = std::get<int>(map.at(flutter::EncodableValue("height")));
+
+
+  return info;
+}
+
+TRTCImageBuffer SDKManager::FromEncodableValueToBuffer(const flutter::EncodableValue& value) {  
+  TRTCImageBuffer buffer;
+
+  const flutter::EncodableMap& map = std::get<flutter::EncodableMap>(value);
+
+  std::vector<uint8_t> buffer_vector = std::get<std::vector<uint8_t>>(map.at(flutter::EncodableValue("buffer")));
+  buffer.buffer = reinterpret_cast<const char*>(buffer_vector.data());
+
+  buffer.length = std::get<int>(map.at(flutter::EncodableValue("length")));
+  buffer.width = std::get<int>(map.at(flutter::EncodableValue("width")));
+  buffer.height = std::get<int>(map.at(flutter::EncodableValue("height")));
+  
+  return buffer;
+}
+
+TRTCScreenCaptureProperty SDKManager::FromEncodableValueProperty(const flutter::EncodableValue& value) {
+  TRTCScreenCaptureProperty property;
+
+  const flutter::EncodableMap& map = std::get<flutter::EncodableMap>(value);
+
+  property.enableCaptureMouse = std::get<bool>(map.at(flutter::EncodableValue("enableCaptureMouse")));
+  property.enableHighLight = std::get<bool>(map.at(flutter::EncodableValue("enableHighLight")));
+  property.enableHighPerformance = std::get<bool>(map.at(flutter::EncodableValue("enableHighPerformance")));
+  property.highLightColor = std::get<int>(map.at(flutter::EncodableValue("highLightColor")));
+  property.highLightWidth = std::get<int>(map.at(flutter::EncodableValue("highLightWidth")));
+  property.enableCaptureChildWindow = std::get<bool>(map.at(flutter::EncodableValue("enableCaptureChildWindow")));
+
+  return property;
+}
+
+} // namespace tim_sdk_flutter

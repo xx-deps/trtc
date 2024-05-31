@@ -121,6 +121,10 @@ public:
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
     void getAudioEffectManager(const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+    void getScreenCaptureSources(const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+    void selectScreenCaptureTarget(const flutter::MethodCall<flutter::EncodableValue> &method_call,
+    std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
     void startScreenCapture(const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
     void stopScreenCapture(const flutter::MethodCall<flutter::EncodableValue> &method_call,
@@ -225,6 +229,13 @@ public:
     void unregisterTexture(const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
     
+private:
+    flutter::EncodableValue ToEncodableValue(ITRTCScreenCaptureSourceList* list);
+    flutter::EncodableValue ToEncodableValue(const TRTCScreenCaptureSourceInfo& info);
+    flutter::EncodableValue ToEncodableValue(const TRTCImageBuffer& imageBuffer);
+    TRTCScreenCaptureSourceInfo FromEncodableValue(const flutter::EncodableValue& value);
+    TRTCImageBuffer FromEncodableValueToBuffer(const flutter::EncodableValue& value);
+    TRTCScreenCaptureProperty FromEncodableValueProperty(const flutter::EncodableValue& value);
 
 private:
     ITRTCCloud *trtc_cloud;
