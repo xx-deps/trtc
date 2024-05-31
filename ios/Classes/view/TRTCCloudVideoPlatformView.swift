@@ -29,6 +29,7 @@ class TRTCCloudVideoPlatformView : NSObject,FlutterPlatformView{
 	private var remoteView : UIView
 	private var frame : CGRect
     private let channel: FlutterMethodChannel?
+    private var trtcCloud: TRTCCloud?
 	init(_ frame : CGRect,_ messager: FlutterBinaryMessenger,_ viewId: Int64) {
 		self.frame = frame
 		self.remoteView = UIView()
@@ -41,22 +42,25 @@ class TRTCCloudVideoPlatformView : NSObject,FlutterPlatformView{
 	}
 	
     func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-		switch call.method {
-		case "startRemoteView":
-			self.startRemoteView(call: call, result: result)
-			break
-		case "startLocalPreview":
-			self.startLocalPreview(call: call, result: result)
-			break
-        case "updateLocalView":
-            self.updateLocalView(call: call, result: result)
-            break
-		case "updateRemoteView":
-            self.updateRemoteView(call: call, result: result)
-            break
-		default:
-			result(FlutterMethodNotImplemented)
-		}
+        if let channelName = Utils.getParamByKey(call: call, result: result, param: "channelName") as? String {
+            trtcCloud = TRTCCloudWrapper.cloudMap[channelName]!.getTRTCCloud()
+            switch call.method {
+            case "startRemoteView":
+                self.startRemoteView(call: call, result: result)
+                break
+            case "startLocalPreview":
+                self.startLocalPreview(call: call, result: result)
+                break
+            case "updateLocalView":
+                self.updateLocalView(call: call, result: result)
+                break
+            case "updateRemoteView":
+                self.updateRemoteView(call: call, result: result)
+                break
+            default:
+                result(FlutterMethodNotImplemented)
+            }
+        }
 	}
 	
     func view() -> UIView {
@@ -70,30 +74,38 @@ class TRTCCloudVideoPlatformView : NSObject,FlutterPlatformView{
 	}
 	
     func startRemoteView(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String, 
-      	let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
-			TRTCCloud.sharedInstance().startRemoteView(userId, streamType: TRTCVideoStreamType(rawValue: streamType)!, view: self.remoteView)
-			result(nil)
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String, 
+      	let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
+            if let cloud = trtcCloud {
+                cloud.startRemoteView(userId, streamType: TRTCVideoStreamType(rawValue: streamType) ?? .big, view: self.remoteView)
+                result(nil)
+            }
 		}
 	}
 	
     func startLocalPreview(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let frontCamera = CommonUtils.getParamByKey(call: call, result: result, param: "frontCamera") as? Bool{
-			TRTCCloud.sharedInstance().startLocalPreview(frontCamera, view: self.remoteView)
-			result(nil)
+		if let frontCamera = Utils.getParamByKey(call: call, result: result, param: "frontCamera") as? Bool{
+            if let cloud = trtcCloud {
+                cloud.startLocalPreview(frontCamera, view: self.remoteView)
+                result(nil)
+            }
 		}
 	}
 
     func updateLocalView(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        TRTCCloud.sharedInstance().updateLocalView(self.remoteView)
-        result(nil)
+        if let cloud = trtcCloud {
+            cloud.updateLocalView(self.remoteView)
+            result(nil)
+        }
     }
 
     func updateRemoteView(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String, 
-			let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
-            TRTCCloud.sharedInstance().updateRemoteView(self.remoteView, streamType: TRTCVideoStreamType(rawValue: streamType)!, forUser: userId)
-			result(nil)
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String, 
+			let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
+            if let cloud = trtcCloud {
+                cloud.updateRemoteView(self.remoteView, streamType: TRTCVideoStreamType(rawValue: streamType) ?? .big, forUser: userId)
+                result(nil)
+            }
 		}
     }
 }

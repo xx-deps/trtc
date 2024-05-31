@@ -1,13 +1,13 @@
 package com.tencent.trtcplugin.view;
 
 import android.content.Context;
-import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 
 import com.tencent.liteav.basic.log.TXCLog;
 import com.tencent.rtmp.ui.TXCloudVideoView;
 import com.tencent.trtc.TRTCCloud;
+import com.tencent.trtcplugin.TRTCCloudWrapper;
 import com.tencent.trtcplugin.util.CommonUtil;
 
 import io.flutter.plugin.common.BinaryMessenger;
@@ -26,10 +26,10 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
     public static final String SIGN = "trtcCloudChannelView";
     private static final String TAG = "TRTCCloudFlutter";
 
-    private BinaryMessenger messenger;
-    private TRTCCloud trtcCloud;
-    private TXCloudVideoView remoteView;
-    private MethodChannel mChannel;
+    private BinaryMessenger  mMessenger;
+    private TRTCCloud        mTRTCCloud;
+    private TXCloudVideoView mRemoteView;
+    private MethodChannel    mChannel;
 
     /**
      * 初始化工厂信息，此处的域是 PlatformViewFactory
@@ -37,15 +37,14 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
     public TRTCCloudVideoPlatformView(Context context, BinaryMessenger messenger) {
         super(StandardMessageCodec.INSTANCE);
 
-        this.messenger = messenger;
-        trtcCloud = TRTCCloud.sharedInstance(context);
-        remoteView = new TXCloudVideoView(context);
-        remoteView.addVideoView(new TextureView(context));
+        this.mMessenger = messenger;
+        mRemoteView = new TXCloudVideoView(context);
+        mRemoteView.addVideoView(new TextureView(context));
     }
 
     @Override
     public View getView() {
-        return remoteView;
+        return mRemoteView;
     }
 
     @Override
@@ -54,8 +53,8 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
     @Override
     public PlatformView create(Context context, int viewId, Object args) {
         // 每次实例化对象，保证界面上每一个组件的独立性
-        TRTCCloudVideoPlatformView view = new TRTCCloudVideoPlatformView(context, messenger);
-        mChannel = new MethodChannel(messenger, SIGN + "_" + viewId);
+        TRTCCloudVideoPlatformView view = new TRTCCloudVideoPlatformView(context, mMessenger);
+        mChannel = new MethodChannel(mMessenger, SIGN + "_" + viewId);
         mChannel.setMethodCallHandler(view);
         return view;
     }
@@ -63,6 +62,8 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
     @Override
     public void onMethodCall(MethodCall call, Result result) {
         TXCLog.i(TAG, "|method=" + call.method + "|arguments=" + call.arguments);
+        String channelName = CommonUtil.getParam(call, result, "channelName");
+        mTRTCCloud = TRTCCloudWrapper.mTRTCManagerMap.get(channelName).getTRTCCloud();
         switch (call.method) {
             case "startRemoteView":
                 this.startRemoteView(call, result);
@@ -88,7 +89,7 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
     private void startRemoteView(MethodCall call, Result result) {
         String userId = CommonUtil.getParam(call, result, "userId");
         int streamType = CommonUtil.getParam(call, result, "streamType");
-        trtcCloud.startRemoteView(userId, streamType, this.remoteView);
+        mTRTCCloud.startRemoteView(userId, streamType, this.mRemoteView);
         result.success(null);
     }
 
@@ -97,7 +98,7 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
      */
     private void startLocalPreview(MethodCall call, Result result) {
         boolean frontCamera = CommonUtil.getParam(call, result, "frontCamera");
-        trtcCloud.startLocalPreview(frontCamera, this.remoteView);
+        mTRTCCloud.startLocalPreview(frontCamera, this.mRemoteView);
         result.success(null);
     }
 
@@ -105,7 +106,7 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
      * 更新本地视频的预览画面
      */
     private void updateLocalView(MethodCall call, Result result) {
-        trtcCloud.updateLocalView(this.remoteView);
+        mTRTCCloud.updateLocalView(this.mRemoteView);
         result.success(null);
     }
 
@@ -115,7 +116,7 @@ public class TRTCCloudVideoPlatformView extends PlatformViewFactory
     private void updateRemoteView(MethodCall call, Result result) {
         String userId = CommonUtil.getParam(call, result, "userId");
         int streamType = CommonUtil.getParam(call, result, "streamType");
-        trtcCloud.updateRemoteView(userId, streamType, this.remoteView);
+        mTRTCCloud.updateRemoteView(userId, streamType, this.mRemoteView);
         result.success(null);
     }
 }

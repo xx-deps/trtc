@@ -16,7 +16,11 @@ class TRTCCloud {
 
   static const MethodChannel _channel = const MethodChannel('trtcCloudChannel');
 
-  static TRTCCloudListenerObj? listener;
+  TRTCCloudListenerWrapper? listener;
+
+  MethodChannel? _cloudChannel;
+
+  TRTCAudioFrameListenerPlatformMethod? _audioFrameListener;
 
   static Future<String?> getPlatformVersion() async {
     final String? version = await _channel.invokeMethod('getPlatformVersion');
@@ -27,6 +31,7 @@ class TRTCCloud {
   static Future<TRTCCloud?> sharedInstance() async {
     if (_trtcCloud == null) {
       _trtcCloud = new TRTCCloud();
+      _trtcCloud?._cloudChannel = _channel;
       await _channel.invokeMethod('sharedInstance');
     }
     return _trtcCloud;
@@ -35,7 +40,59 @@ class TRTCCloud {
   /// Terminate a `TRTCCloud` singleton
   static Future<void> destroySharedInstance() async {
     await _channel.invokeMethod('destroySharedInstance');
+    _trtcCloud?._cloudChannel = null;
     _trtcCloud = null;
+  }
+
+  /// Create a child TRTC instance (for concurrent viewing in multiple rooms)
+  ///
+  /// By calling this interface, you can create multiple TRTCCloud instances so that you can enter multiple different rooms to watch audio and video streams at the same time.
+  ///
+  /// Sample code
+  /// ```
+  /// cloud = (await TRTCCloud.sharedInstance())!;
+  /// //Create child instance
+  /// subCloud = await cloud!.createSubCloud();
+  /// //Destroy child instance
+  /// cluod.destroySubCloud(subCloud);
+  /// ```
+  ///
+  /// **Notice**
+  /// - Currently child instances cannot support custom rendering.
+  /// - The same user can use the same userId to enter multiple rooms with different roomIds.
+  /// - You can set [TRTCCloudListener] for different instances to obtain respective event notifications.
+  /// - The same user can push streams in multiple TRTCCloud instances, and can also call local audio and video-related interfaces in sub-instances.
+  ///
+  /// **Return value:** TRTC instance
+  ///
+  /// **Not supported on:**
+  /// - web
+  /// - MacOS
+  /// - Windows
+  Future<TRTCCloud> createSubCloud() async {
+    TRTCCloud cloud = new TRTCCloud();
+    MethodChannel channel = MethodChannel("trtcCloudChannel_${cloud.hashCode}");
+    await _cloudChannel!.invokeMethod("createSubCloud", {
+      "channelName" : channel.name,
+    });
+    cloud._cloudChannel = channel;
+    return cloud;
+  }
+
+  /// Destroy the child TRTC instance
+  ///
+  /// **Not supported on:**
+  /// - web
+  /// - MacOS
+  /// - Windows
+  Future<void> destroySubCloud(TRTCCloud cloud) {
+    if (cloud == _trtcCloud) {
+      print("TRTCCloud : Singleton objects cannot be destroyed through this interface");
+      return Future<void>.value();
+    }
+    return _cloudChannel!.invokeMethod("destroySubCloud", {
+      "channelName" : cloud._cloudChannel!.name,
+    });
   }
 
   /// Set an event listener, through which users can get various status notifications from `TRTCCloud`
@@ -43,7 +100,7 @@ class TRTCCloud {
   /// For more information, please see the definitions in [TRTCCloudListener] in the `trtc_cloud_listener` file
   void registerListener(ListenerValue func) {
     if (listener == null) {
-      listener = TRTCCloudListenerObj(_channel);
+      listener = TRTCCloudListenerWrapper(_cloudChannel!);
     }
     listener!.addListener(func);
   }
@@ -51,7 +108,7 @@ class TRTCCloud {
   /// Remove message listener
   void unRegisterListener(ListenerValue func) {
     if (listener == null) {
-      listener = TRTCCloudListenerObj(_channel);
+      listener = TRTCCloudListenerWrapper(_cloudChannel!);
     }
     listener!.removeListener(func);
   }
@@ -77,7 +134,7 @@ class TRTCCloud {
   /// 2. No matter whether room entry is successful, [enterRoom] must be used together with [exitRoom]. If [enterRoom] is called again before [exitRoom] is called, an unexpected error will occur.
   Future<void> enterRoom(TRTCParams param, int scene) {
     if (kIsWeb || Platform.isAndroid || Platform.isWindows) {
-      return _channel.invokeMethod('enterRoom', {
+      return _cloudChannel!.invokeMethod('enterRoom', {
         "sdkAppId": param.sdkAppId,
         "userId": param.userId,
         "userSig": param.userSig,
@@ -91,7 +148,7 @@ class TRTCCloud {
         "scene": scene,
       });
     } else {
-      return _channel.invokeMethod('enterRoom', {
+      return _cloudChannel!.invokeMethod('enterRoom', {
         "param": jsonEncode(param),
         "scene": scene,
       });
@@ -125,7 +182,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<int?> setLocalVideoRenderListener(CustomLocalRender param) {
-    return _channel.invokeMethod('setLocalVideoRenderListener', {
+    return _cloudChannel!.invokeMethod('setLocalVideoRenderListener', {
       "userId": param.userId,
       "isFront": param.isFront,
       "streamType": param.streamType,
@@ -138,7 +195,7 @@ class TRTCCloud {
   ///
   /// Update the width and height of the local video
   Future<void> updateLocalVideoRender(int width, int height) {
-    return _channel.invokeMethod('updateLocalVideoRender', {
+    return _cloudChannel!.invokeMethod('updateLocalVideoRender', {
       "width": width,
       "height": height,
     });
@@ -148,7 +205,7 @@ class TRTCCloud {
   ///
   /// Update the width and height of the remote video
   Future<void> updateRemoteVideoRender(int textureID, int width, int height) {
-    return _channel.invokeMethod('updateRemoteVideoRender', {
+    return _cloudChannel!.invokeMethod('updateRemoteVideoRender', {
       "textureID": textureID,
       "width": width,
       "height": height,
@@ -179,7 +236,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<int?> setRemoteVideoRenderListener(CustomRemoteRender param) {
-    return _channel.invokeMethod('setRemoteVideoRenderListener', {
+    return _cloudChannel!.invokeMethod('setRemoteVideoRenderListener', {
       "userId": param.userId,
       "streamType": param.streamType,
       "width": param.width,
@@ -196,7 +253,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> unregisterTexture(int textureID) {
-    return _channel.invokeMethod('unregisterTexture', {
+    return _cloudChannel!.invokeMethod('unregisterTexture', {
       "textureID": textureID,
     });
   }
@@ -207,7 +264,7 @@ class TRTCCloud {
   ///
   /// If you need to call [enterRoom] again or switch to another audio/video SDK, please wait until you receive the [TRTCCloudListener.onExitRoom] callback; otherwise, exceptions such as occupied camera or mic may occur; for example, the common issue with switching between media volume and call volume on Android is caused by this problem.
   Future<void> exitRoom() {
-    return _channel.invokeMethod('exitRoom');
+    return _cloudChannel!.invokeMethod('exitRoom');
   }
 
   /// Request cross-room calls so that two different rooms can share audio and video streams (e.g., "anchor PK" scenarios).
@@ -243,7 +300,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> connectOtherRoom(String param) {
-    return _channel.invokeMethod('connectOtherRoom', {
+    return _cloudChannel!.invokeMethod('connectOtherRoom', {
       "param": param,
     });
   }
@@ -255,7 +312,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> disconnectOtherRoom() {
-    return _channel.invokeMethod('disconnectOtherRoom');
+    return _cloudChannel!.invokeMethod('disconnectOtherRoom');
   }
 
   /// Switch roles (applicable only to the live streaming scenarios [TRTCCloudDef.TRTC_APP_SCENE_LIVE] and [TRTCCloudDef.TRTC_APP_SCENE_VOICE_CHATROOM])
@@ -271,7 +328,7 @@ class TRTCCloud {
   /// `TRTCCloudDef.TRTCRoleAudience`: audience, who can only watch the video but cannot upstream video or audio. There is no upper limit for the number of audience users in one room.
   Future<void> switchRole(int role // Target role, which is anchor by default:
       ) {
-    return _channel.invokeMethod('switchRole', {
+    return _cloudChannel!.invokeMethod('switchRole', {
       "role": role,
     });
   }
@@ -296,7 +353,7 @@ class TRTCCloud {
       bool
           autoRecvVideo // true: video data will be automatically received; false: `startRemoteView/stopRemoteView` needs to be called to send or cancel a request. Default value: true
       ) {
-    return _channel.invokeMethod('setDefaultStreamRecvMode', {
+    return _cloudChannel!.invokeMethod('setDefaultStreamRecvMode', {
       "autoRecvAudio": autoRecvAudio,
       "autoRecvVideo": autoRecvVideo,
     });
@@ -311,7 +368,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> switchRoom(TRTCSwitchRoomConfig config) {
-    return _channel.invokeMethod('switchRoom', {
+    return _cloudChannel!.invokeMethod('switchRoom', {
       "config": jsonEncode(config),
     });
   }
@@ -341,7 +398,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> startPublishing(String streamId, int streamType) {
-    return _channel.invokeMethod('startPublishing', {
+    return _cloudChannel!.invokeMethod('startPublishing', {
       "streamId": streamId,
       "streamType": streamType,
     });
@@ -352,7 +409,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> stopPublishing() {
-    return _channel.invokeMethod('stopPublishing');
+    return _cloudChannel!.invokeMethod('stopPublishing');
   }
 
   /// Start relaying to the live streaming CDN of another cloud
@@ -370,7 +427,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> startPublishCDNStream(TRTCPublishCDNParam param) {
-    return _channel.invokeMethod('startPublishCDNStream', {
+    return _cloudChannel!.invokeMethod('startPublishCDNStream', {
       "param": jsonEncode(param),
     });
   }
@@ -380,7 +437,7 @@ class TRTCCloud {
   /// **Not supported on:**
   /// - web
   Future<void> stopPublishCDNStream() {
-    return _channel.invokeMethod('stopPublishCDNStream');
+    return _cloudChannel!.invokeMethod('stopPublishCDNStream');
   }
 
   /// Set the layout and transcoding parameters of On-Cloud MixTranscoding
@@ -401,10 +458,10 @@ class TRTCCloud {
   /// - web
   Future<void> setMixTranscodingConfig(TRTCTranscodingConfig? config) {
     if (kIsWeb) {
-      return _channel.invokeMethod(
+      return _cloudChannel!.invokeMethod(
           'setMixTranscodingConfig', jsonEncode(config));
     }
-    return _channel.invokeMethod('setMixTranscodingConfig', {
+    return _cloudChannel!.invokeMethod('setMixTranscodingConfig', {
       "config": jsonEncode(config),
     });
   }
@@ -419,7 +476,7 @@ class TRTCCloud {
   Future<void> muteLocalVideo(
       bool mute // true: blocked; false: enabled. Default value: false
       ) {
-    return _channel.invokeMethod('muteLocalVideo', {
+    return _cloudChannel!.invokeMethod('muteLocalVideo', {
       "mute": mute,
     });
   }
@@ -445,7 +502,7 @@ class TRTCCloud {
     if (assetUrl != null && assetUrl.indexOf('http') != 0) {
       type = 'local';
     }
-    return _channel.invokeMethod(
+    return _cloudChannel!.invokeMethod(
         'setVideoMuteImage', {"imageUrl": imageUrl, "type": type, "fps": fps});
   }
 
@@ -463,11 +520,11 @@ class TRTCCloud {
   /// - macOS
   Future<void> startLocalPreview(bool frontCamera, int? viewId) {
     if (viewId == null) {
-      return _channel
+      return _cloudChannel!
           .invokeMethod('startLocalPreview', {"isFront": frontCamera});
     } else {
       return TRTCCloudVideoViewController(viewId)
-          .startLocalPreview(frontCamera);
+          .startLocalPreview(frontCamera, _cloudChannel!.name);
     }
   }
 
@@ -484,7 +541,7 @@ class TRTCCloud {
   /// - macOS
   /// - Windows
   Future<void> updateLocalView(int viewId) {
-    return TRTCCloudVideoViewController(viewId).updateLocalView(viewId);
+    return TRTCCloudVideoViewController(viewId).updateLocalView(viewId, _cloudChannel!.name);
   }
 
   /// Update the window of remote video image
@@ -505,12 +562,12 @@ class TRTCCloud {
   /// - Windows
   Future<void> updateRemoteView(String userId, int streamType, int viewId) {
     return TRTCCloudVideoViewController(viewId)
-        .updateRemoteView(userId, streamType, viewId);
+        .updateRemoteView(userId, streamType, viewId, _cloudChannel!.name);
   }
 
   /// Stop local video capturing and preview
   Future<void> stopLocalPreview() {
-    return _channel.invokeMethod('stopLocalPreview');
+    return _cloudChannel!.invokeMethod('stopLocalPreview');
   }
 
   /// Display remote video image or substream and bind the video rendering control at the same time.
@@ -533,11 +590,11 @@ class TRTCCloud {
   /// - macOS
   Future<void> startRemoteView(String userId, int streamType, int? viewId) {
     if (viewId == null) {
-      return _channel.invokeMethod(
+      return _cloudChannel!.invokeMethod(
           'startRemoteView', {"userId": userId, "streamType": streamType});
     } else {
       return TRTCCloudVideoViewController(viewId)
-          .startRemoteView(userId, streamType);
+          .startRemoteView(userId, streamType, _cloudChannel!.name);
     }
   }
 
@@ -560,7 +617,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - macOS
   Future<void> stopRemoteView(String userId, int streamType) {
-    return _channel.invokeMethod(
+    return _cloudChannel!.invokeMethod(
         'stopRemoteView', {"userId": userId, "streamType": streamType});
   }
 
@@ -568,7 +625,7 @@ class TRTCCloud {
   ///
   /// **Note:** if there is a screen sharing image, it will be stopped together with other remote video images.
   Future<void> stopAllRemoteView() {
-    return _channel.invokeMethod('stopAllRemoteView');
+    return _cloudChannel!.invokeMethod('stopAllRemoteView');
   }
 
   /// Pause/Resume subscribing to remote user's video stream
@@ -584,7 +641,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> muteRemoteVideoStream(String userId, bool mute) {
-    return _channel.invokeMethod('muteRemoteVideoStream', {
+    return _cloudChannel!.invokeMethod('muteRemoteVideoStream', {
       "userId": userId,
       "mute": mute,
     });
@@ -602,7 +659,7 @@ class TRTCCloud {
   /// - web
   Future<void> muteAllRemoteVideoStreams(bool mute // 是否停止接收
       ) {
-    return _channel.invokeMethod('muteAllRemoteVideoStreams', {
+    return _cloudChannel!.invokeMethod('muteAllRemoteVideoStreams', {
       "mute": mute,
     });
   }
@@ -619,9 +676,9 @@ class TRTCCloud {
           param // 视频编码参数，详情请参考 TRTCCloudDef.java 中的 TRTCVideoEncParam 定义。
       ) {
     if (kIsWeb) {
-      return _channel.invokeMethod('setVideoEncoderParam', jsonEncode(param));
+      return _cloudChannel!.invokeMethod('setVideoEncoderParam', jsonEncode(param));
     }
-    return _channel.invokeMethod('setVideoEncoderParam', {
+    return _cloudChannel!.invokeMethod('setVideoEncoderParam', {
       "param": jsonEncode(param),
     });
   }
@@ -637,7 +694,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> setNetworkQosParam(TRTCNetworkQosParam param) {
-    return _channel
+    return _cloudChannel!
         .invokeMethod('setNetworkQosParam', {"param": jsonEncode(param)});
   }
 
@@ -650,7 +707,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> setLocalRenderParams(TRTCRenderParams renderParams) {
-    return _channel.invokeMethod('setLocalRenderParams', {
+    return _cloudChannel!.invokeMethod('setLocalRenderParams', {
       "param": jsonEncode(renderParams),
     });
   }
@@ -675,7 +732,7 @@ class TRTCCloud {
   /// - web
   Future<void> setRemoteRenderParams(
       String userId, int streamType, TRTCRenderParams renderParams) {
-    return _channel.invokeMethod('setRemoteRenderParams', {
+    return _cloudChannel!.invokeMethod('setRemoteRenderParams', {
       "userId": userId,
       "streamType": streamType,
       "param": jsonEncode(renderParams),
@@ -699,7 +756,7 @@ class TRTCCloud {
   Future<void> setVideoEncoderRotation(
       int rotation // Currently, rotation angles of `TRTC_VIDEO_ROTATION_0` and `TRTC_VIDEO_ROTATION_180` are supported. Default
       ) {
-    return _channel.invokeMethod('setVideoEncoderRotation', {
+    return _cloudChannel!.invokeMethod('setVideoEncoderRotation', {
       "rotation": rotation,
     });
   }
@@ -717,7 +774,7 @@ class TRTCCloud {
   Future<void> setVideoEncoderMirror(
       bool mirror // true: mirrored; false: not mirrored. Default value: false
       ) {
-    return _channel.invokeMethod('setVideoEncoderMirror', {
+    return _cloudChannel!.invokeMethod('setVideoEncoderMirror', {
       "mirror": mirror,
     });
   }
@@ -740,7 +797,7 @@ class TRTCCloud {
   Future<void> setGSensorMode(
       int mode // G-sensor mode. For more information, please see the definition of `TRTC_GSENSOR_MODE`. Default value: TRTC_GSENSOR_MODE_UIFIXLAYOUT
       ) {
-    return _channel.invokeMethod('setGSensorMode', {
+    return _cloudChannel!.invokeMethod('setGSensorMode', {
       "mode": mode,
     });
   }
@@ -774,7 +831,7 @@ class TRTCCloud {
       TRTCVideoEncParam
           smallVideoEncParam // Video parameters of small image stream
       ) {
-    return _channel.invokeMethod('enableEncSmallVideoStream', {
+    return _cloudChannel!.invokeMethod('enableEncSmallVideoStream', {
       "enable": enable,
       "smallVideoEncParam": jsonEncode(smallVideoEncParam),
     });
@@ -798,7 +855,7 @@ class TRTCCloud {
       String userId, // User ID
       int streamType // Video stream type, i.e., big image or small image. Default value: big image
       ) {
-    return _channel.invokeMethod('setRemoteVideoStreamType', {
+    return _cloudChannel!.invokeMethod('setRemoteVideoStreamType', {
       "userId": userId,
       "streamType": streamType,
     });
@@ -825,7 +882,7 @@ class TRTCCloud {
     int sourceType, // 0-stream  1-view
     String path, // Screenshot storage address
   ) {
-    return _channel.invokeMethod('snapshotVideo', {
+    return _cloudChannel!.invokeMethod('snapshotVideo', {
       "userId": userId,
       "streamType": streamType,
       "path": path,
@@ -845,14 +902,14 @@ class TRTCCloud {
   /// * [TRTCCloudDef.TRTC_AUDIO_QUALITY_DEFAULT], Default: sample rate: 48 kHz; mono channel; audio bitrate: 50 Kbps. This is the default sound quality of the SDK and recommended if there are no special requirements.
   /// * [TRTCCloudDef.TRTC_AUDIO_QUALITY_MUSIC], HD: sample rate: 48 kHz; dual channel + full band; audio bitrate: 128 Kbps. This is suitable for scenarios where Hi-Fi music transfer is required, such as karaoke and music live streaming.
   Future<void> startLocalAudio(int quality) {
-    return _channel.invokeMethod('startLocalAudio', {"quality": quality});
+    return _cloudChannel!.invokeMethod('startLocalAudio', {"quality": quality});
   }
 
   /// Disable local audio capturing and upstreaming
   ///
   /// When local audio capturing and upstreaming is disabled, other members in the room will receive the `onUserAudioAvailable(false)` callback notification.
   Future<void> stopLocalAudio() {
-    return _channel.invokeMethod('stopLocalAudio');
+    return _cloudChannel!.invokeMethod('stopLocalAudio');
   }
 
   /// Mute/Unmute local audio
@@ -866,7 +923,7 @@ class TRTCCloud {
   /// `mute` `true`: muted; `false`: unmuted
   Future<void> muteLocalAudio(bool mute // true：屏蔽；false：开启，默认值：false。
       ) {
-    return _channel.invokeMethod('muteLocalAudio', {
+    return _cloudChannel!.invokeMethod('muteLocalAudio', {
       "mute": mute,
     });
   }
@@ -884,7 +941,7 @@ class TRTCCloud {
       String userId, // Remote user ID
       bool mute // true: muted; false: not muted
       ) {
-    return _channel.invokeMethod('muteRemoteAudio', {
+    return _cloudChannel!.invokeMethod('muteRemoteAudio', {
       "userId": userId,
       "mute": mute,
     });
@@ -899,7 +956,7 @@ class TRTCCloud {
   /// **Note:** when all users are muted, the system will stop receiving and playing back all users' remote audio streams. When all users are unmuted, the system will automatically pull and play back all users' remote audio streams.
   Future<void> muteAllRemoteAudio(bool mute // true: muted; false: not muted
       ) {
-    return _channel.invokeMethod('muteAllRemoteAudio', {
+    return _cloudChannel!.invokeMethod('muteAllRemoteAudio', {
       "mute": mute,
     });
   }
@@ -915,7 +972,7 @@ class TRTCCloud {
       String userId, // Remote user ID
       int volume // Volume. Value range: 0–100
       ) {
-    return _channel.invokeMethod('setRemoteAudioVolume', {
+    return _cloudChannel!.invokeMethod('setRemoteAudioVolume', {
       "userId": userId,
       "volume": volume,
     });
@@ -932,7 +989,7 @@ class TRTCCloud {
   Future<void> setAudioCaptureVolume(
       int volume // volume Volume. Value range: 0–100. Default value: 100
       ) {
-    return _channel.invokeMethod('setAudioCaptureVolume', {
+    return _cloudChannel!.invokeMethod('setAudioCaptureVolume', {
       "volume": volume,
     });
   }
@@ -942,7 +999,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<int?> getAudioCaptureVolume() {
-    return _channel.invokeMethod('getAudioCaptureVolume');
+    return _cloudChannel!.invokeMethod('getAudioCaptureVolume');
   }
 
   /// Set the playback volume of remote audio
@@ -958,7 +1015,7 @@ class TRTCCloud {
   Future<void> setAudioPlayoutVolume(
       int volume // volume Volume. Value range: 0–100. Default value: 100
       ) {
-    return _channel.invokeMethod('setAudioPlayoutVolume', {
+    return _cloudChannel!.invokeMethod('setAudioPlayoutVolume', {
       "volume": volume,
     });
   }
@@ -968,7 +1025,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<int?> getAudioPlayoutVolume() {
-    return _channel.invokeMethod('getAudioPlayoutVolume');
+    return _cloudChannel!.invokeMethod('getAudioPlayoutVolume');
   }
 
   /// Enable volume reminder
@@ -981,7 +1038,7 @@ class TRTCCloud {
   Future<void> enableAudioVolumeEvaluation(
       int intervalMs // Determines the interval in ms for triggering the `onUserVoiceVolume` callback. The minimum interval is 100 ms. If the value is smaller than 0, the callback will be disabled. We recommend you set this parameter to 300 ms. For detailed callback rules, please see the description of `onUserVoiceVolume`.
       ) {
-    return _channel.invokeMethod('enableAudioVolumeEvaluation', {
+    return _cloudChannel!.invokeMethod('enableAudioVolumeEvaluation', {
       "intervalMs": intervalMs,
     });
   }
@@ -1001,7 +1058,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<int?> startAudioRecording(TRTCAudioRecordingParams param) async {
-    return _channel.invokeMethod('startAudioRecording', {
+    return _cloudChannel!.invokeMethod('startAudioRecording', {
       "param": jsonEncode(param),
     });
   }
@@ -1013,7 +1070,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> stopAudioRecording() {
-    return _channel.invokeMethod('stopAudioRecording');
+    return _cloudChannel!.invokeMethod('stopAudioRecording');
   }
 
   /// Start local media recording with both audio and video data
@@ -1027,7 +1084,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> startLocalRecording(TRTCLocalRecordingParams param) async {
-    return _channel.invokeMethod('startLocalRecording', {
+    return _cloudChannel!.invokeMethod('startLocalRecording', {
       "param": jsonEncode(param),
     });
   }
@@ -1039,7 +1096,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> stopLocalRecording() {
-    return _channel.invokeMethod('stopLocalRecording');
+    return _cloudChannel!.invokeMethod('stopLocalRecording');
   }
 
   /// Enable system audio capturing
@@ -1049,7 +1106,7 @@ class TRTCCloud {
   /// - iOS
   /// - macOS
   Future<void> startSystemAudioLoopback([String path = '']) {
-    return _channel.invokeMethod('startSystemAudioLoopback', {
+    return _cloudChannel!.invokeMethod('startSystemAudioLoopback', {
       "path": path,
     });
   }
@@ -1061,7 +1118,7 @@ class TRTCCloud {
   ///  - iOS
   ///  - macOS
   Future<void> stopSystemAudioLoopback() {
-    return _channel.invokeMethod('stopSystemAudioLoopback');
+    return _cloudChannel!.invokeMethod('stopSystemAudioLoopback');
   }
 
   /// Get a device management module for managing audio and video related devices such as cameras, microphones, and speakers
@@ -1069,8 +1126,8 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   TXDeviceManager getDeviceManager() {
-    _channel.invokeMethod('getDeviceManager');
-    return new TXDeviceManager(_channel);
+    _cloudChannel!.invokeMethod('getDeviceManager');
+    return new TXDeviceManager(_cloudChannel!);
   }
 
   /// Get the beauty filter management object, you can modify the beauty, filter, redness and other parameters
@@ -1079,8 +1136,8 @@ class TRTCCloud {
   /// - web
   /// - Windows
   TXBeautyManager getBeautyManager() {
-    _channel.invokeMethod('getBeautyManager');
-    return new TXBeautyManager(_channel);
+    _cloudChannel!.invokeMethod('getBeautyManager');
+    return new TXBeautyManager(_cloudChannel!);
   }
 
   /// Adds a watermark to the specified location
@@ -1119,7 +1176,7 @@ class TRTCCloud {
     if (assetUrl.indexOf('http') != 0) {
       type = 'local';
     }
-    return _channel.invokeMethod('setWatermark', {
+    return _cloudChannel!.invokeMethod('setWatermark', {
       "type": type,
       "imageUrl": imageUrl,
       "streamType": streamType,
@@ -1149,35 +1206,35 @@ class TRTCCloud {
       String shareUserSig = '',
       String appGroup = ''}) {
     if (kIsWeb) {
-      return _channel.invokeMethod('startScreenCapture', {
+      return _cloudChannel!.invokeMethod('startScreenCapture', {
         "shareUserId": shareUserId,
         "shareUserSig": shareUserSig,
         "streamType": streamType
       });
     }
     if (!kIsWeb && Platform.isAndroid) {
-      return _channel.invokeMethod('startScreenCapture',
+      return _cloudChannel!.invokeMethod('startScreenCapture',
           {"encParams": jsonEncode(encParams), "streamType": streamType});
     }
     if (!kIsWeb && Platform.isIOS && appGroup != '') {
-      return _channel.invokeMethod('startScreenCaptureByReplaykit', {
+      return _cloudChannel!.invokeMethod('startScreenCaptureByReplaykit', {
         "encParams": jsonEncode(encParams),
         "appGroup": appGroup,
         "streamType": streamType,
       });
     } else if (!kIsWeb && Platform.isIOS && appGroup == '') {
-      return _channel.invokeMethod('startScreenCaptureInApp', {
+      return _cloudChannel!.invokeMethod('startScreenCaptureInApp', {
         "encParams": jsonEncode(encParams),
         "streamType": streamType,
       });
     }
-    return _channel.invokeMethod('startScreenCapture',
+    return _cloudChannel!.invokeMethod('startScreenCapture',
         {"streamType": streamType, "encParams": jsonEncode(encParams)});
   }
 
   /// Stop screen capture
   Future<void> stopScreenCapture() {
-    return _channel.invokeMethod('stopScreenCapture');
+    return _cloudChannel!.invokeMethod('stopScreenCapture');
   }
 
   /// Pause screen sharing
@@ -1185,7 +1242,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> pauseScreenCapture() {
-    return _channel.invokeMethod('pauseScreenCapture');
+    return _cloudChannel!.invokeMethod('pauseScreenCapture');
   }
 
   /// Resume screen sharing
@@ -1193,7 +1250,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> resumeScreenCapture() {
-    return _channel.invokeMethod('resumeScreenCapture');
+    return _cloudChannel!.invokeMethod('resumeScreenCapture');
   }
 
   /// Get sound effect management class `TXAudioEffectManager`, which is used to set the background music, short sound effects and life effects.
@@ -1201,8 +1258,8 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   TXAudioEffectManager getAudioEffectManager() {
-    _channel.invokeMethod('getAudioEffectManager');
-    return new TXAudioEffectManager(_channel);
+    _cloudChannel!.invokeMethod('getAudioEffectManager');
+    return new TXAudioEffectManager(_cloudChannel!);
   }
 
   /// Send a customized message to all users in the room using a UDP channel
@@ -1239,7 +1296,7 @@ class TRTCCloud {
   /// - web
   Future<bool?> sendCustomCmdMsg(
       int cmdID, String data, bool reliable, bool ordered) {
-    return _channel.invokeMethod('sendCustomCmdMsg', {
+    return _cloudChannel!.invokeMethod('sendCustomCmdMsg', {
       "cmdID": cmdID,
       "data": data,
       "reliable": reliable,
@@ -1281,7 +1338,7 @@ class TRTCCloud {
   /// - web
   /// - Windows
   Future<bool?> sendSEIMsg(String data, int repeatCount) {
-    return _channel
+    return _cloudChannel!
         .invokeMethod('sendSEIMsg', {"data": data, "repeatCount": repeatCount});
   }
 
@@ -1306,7 +1363,7 @@ class TRTCCloud {
       String userId, // User ID
       String userSig // User signature
       ) {
-    return _channel.invokeMethod('startSpeedTest', {
+    return _cloudChannel!.invokeMethod('startSpeedTest', {
       "sdkAppId": sdkAppId,
       "userId": userId,
       "userSig": userSig,
@@ -1318,12 +1375,12 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> stopSpeedTest() {
-    return _channel.invokeMethod('stopSpeedTest');
+    return _cloudChannel!.invokeMethod('stopSpeedTest');
   }
 
   /// Get SDK version information
   Future<String?> getSDKVersion() {
-    return _channel.invokeMethod('getSDKVersion');
+    return _cloudChannel!.invokeMethod('getSDKVersion');
   }
 
   /// Set log output level
@@ -1337,7 +1394,7 @@ class TRTCCloud {
   Future<void> setLogLevel(
       int level // For more information, please see `TRTC_LOG_LEVEL`. Default value: TRTCCloudDef.TRTC_LOG_LEVEL_NULL
       ) {
-    return _channel.invokeMethod('setLogLevel', {"level": level});
+    return _cloudChannel!.invokeMethod('setLogLevel', {"level": level});
   }
 
   /// Enable or disable console log printing
@@ -1347,7 +1404,7 @@ class TRTCCloud {
   /// `enabled` Specify whether to enable it, which is disabled by default
   Future<void> setConsoleEnabled(bool enabled // Whether to enable
       ) {
-    return _channel.invokeMethod('setConsoleEnabled', {
+    return _cloudChannel!.invokeMethod('setConsoleEnabled', {
       "enabled": enabled,
     });
   }
@@ -1364,7 +1421,7 @@ class TRTCCloud {
   /// - web
   Future<void> setLogCompressEnabled(bool enabled // Whether to enable
       ) {
-    return _channel.invokeMethod('setLogCompressEnabled', {
+    return _cloudChannel!.invokeMethod('setLogCompressEnabled', {
       "enabled": enabled,
     });
   }
@@ -1381,7 +1438,7 @@ class TRTCCloud {
   /// - web
   Future<void> setLogDirPath(String path // Whether to enable
       ) {
-    return _channel.invokeMethod('setLogDirPath', {
+    return _cloudChannel!.invokeMethod('setLogDirPath', {
       "path": path,
     });
   }
@@ -1400,7 +1457,7 @@ class TRTCCloud {
   Future<void> showDebugView(
       int showType // 0: does not display; 1: displays lite edition; 2: displays full edition. Default value: 0
       ) {
-    return _channel.invokeMethod('showDebugView', {
+    return _cloudChannel!.invokeMethod('showDebugView', {
       "mode": showType,
     });
   }
@@ -1416,7 +1473,7 @@ class TRTCCloud {
   /// **Platform not supported：**
   /// - web
   Future<void> callExperimentalAPI(String jsonStr) {
-    return _channel.invokeMethod('callExperimentalAPI', {
+    return _cloudChannel!.invokeMethod('callExperimentalAPI', {
       "jsonStr": jsonStr,
     });
   }
@@ -1433,7 +1490,7 @@ class TRTCCloud {
   /// - macOS
   /// - Windows
   Future<int?> enableCustomVideoProcess(bool enable) async {
-    return _channel
+    return _cloudChannel!
         .invokeMethod('enableCustomVideoProcess', {"enable": enable});
   }
 
@@ -1446,7 +1503,7 @@ class TRTCCloud {
   /// - web
   /// - macOS
   Future<void> setSystemAudioLoopbackVolume(int volume) {
-    return _channel
+    return _cloudChannel!
         .invokeMethod('setSystemAudioLoopbackVolume', {'volume': volume});
   }
 
@@ -1466,7 +1523,7 @@ class TRTCCloud {
       {required TRTCPublishTarget target,
       TRTCStreamEncoderParam? params,
       TRTCStreamMixingConfig? config}) async {
-    return _channel.invokeMethod('startPublishMediaStream', {
+    return _cloudChannel!.invokeMethod('startPublishMediaStream', {
       'target': target.toJson(),
       'param': params?.toJson(),
       'config': config?.toJson()
@@ -1492,7 +1549,7 @@ class TRTCCloud {
       required TRTCPublishTarget target,
       TRTCStreamEncoderParam? encoderParam,
       TRTCStreamMixingConfig? mixingConfig}) async {
-    return _channel.invokeMethod('updatePublishMediaStream', {
+    return _cloudChannel!.invokeMethod('updatePublishMediaStream', {
       'taskId': taskId,
       'target': target.toJson(),
       'encoderParam': encoderParam?.toJson(),
@@ -1509,7 +1566,7 @@ class TRTCCloud {
   /// - macOS
   /// - Windows
   Future<void> stopPublishMediaStream(String taskId) async {
-    return _channel.invokeMethod('stopPublishMediaStream', {'taskId': taskId});
+    return _cloudChannel!.invokeMethod('stopPublishMediaStream', {'taskId': taskId});
   }
 
   /// Set custom audio data callback
@@ -1525,9 +1582,11 @@ class TRTCCloud {
   /// - macOS
   /// - Windows
   Future<void> setAudioFrameListener(TRTCAudioFrameListener? listener) async {
-    TRTCAudioFrameListenerPlatformMethod.instance
-        .setAudioFrameListener(listener);
-    return _channel.invokeMethod(
+    if (_audioFrameListener == null) {
+      _audioFrameListener = TRTCAudioFrameListenerPlatformMethod(_cloudChannel!.name);
+    }
+    _audioFrameListener!.setAudioFrameListener(listener);
+    return _cloudChannel!.invokeMethod(
         'setAudioFrameListener', {'isNullListener': listener == null});
   }
 }

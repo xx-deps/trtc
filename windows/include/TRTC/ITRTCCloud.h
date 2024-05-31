@@ -57,7 +57,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
 /**
  * 1.1 创建 TRTCCloud 实例（单例模式）
  *
- * @param context 仅适用于 Android 平台，SDK 内部会将其转化为 Android 平台的 ApplicationContext 用于调用 Androud System API。
+ * @param context 仅适用于 Android 平台，SDK 内部会将其转化为 Android 平台的 ApplicationContext 用于调用 Android System API。
  *        如果传入的 context 参数为空，SDK 内部会自动获取当前进程的 ApplicationContext。
  * @note
  * 1. 如果您使用 delete ITRTCCloud* 会导致编译错误，请使用 destroyTRTCCloud 释放对象指针。
@@ -76,18 +76,14 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
     TRTC_API static void destroyTRTCShareInstance();
 
     /**
-     * 1.3 设置 TRTC 事件回调
+     * 1.3 添加 TRTC 事件回调
      *
      * 您可以通过 {@link ITRTCCloudCallback} 获得来自 SDK 的各类事件通知（比如：错误码，警告码，音视频状态参数等）。
-     * 从 11.4.0 版本以后，我们推荐您使用功能更加强大的{@link addListener}接口，支持添加/移除多个监听。
-     * @param listener 回调实例。
      */
     virtual void addCallback(ITRTCCloudCallback* callback) = 0;
 
     /**
      * 1.4 移除 TRTC 事件回调
-     *
-     * @param callback 回调指针
      */
     virtual void removeCallback(ITRTCCloudCallback* callback) = 0;
 
@@ -403,7 +399,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      * 1. SDK 会通过回调 {@link onStartPublishMediaStream} 带给您后台启动的任务标识（即 taskId）。
      * 2. 同一个任务（TRTCPublishMode 与 TRTCPublishCdnUrl 均相同）仅支持启动一次。若您后续需要更新或者停止该项任务，需要记录并使用返回的 taskId，通过 {@link updatePublishMediaStream} 或者 {@link stopPublishMediaStream} 来操作。
      * 3. target 支持同时配置多个 CDN URL（最多同时 10 个）。若您的同一个转推/转码任务需要发布至多路 CDN，则仅需要在 target 中配置多个 CDN URL 即可。同一个转码任务即使有多个转推地址，对应的转码计费仍只收取一份。
-     * 4. 使用时需要注意不要多个任务同时往相同的 URL 地址推送，以免引起异常推流状态。一种推荐的方案是 URL 中使用 “sdkappid_roomid_userid_main” 作为区分标识，这中命名方式容易辨认且不会在您的多个应用中发生冲突。
+     * 4. 使用时需要注意不要多个任务同时往相同的 URL 地址推送，以免引起异常推流状态。一种推荐的方案是 URL 中使用 “sdkappid_roomid_userid_main” 作为区分标识，这种命名方式容易辨认且不会在您的多个应用中发生冲突。
      */
     virtual void startPublishMediaStream(TRTCPublishTarget* target, TRTCStreamEncoderParam* params, TRTCStreamMixingConfig* config) = 0;
 
@@ -584,6 +580,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      *
      * 该设置能够决定远端用户看到的画面质量，同时也能决定云端录制出的视频文件的画面质量。
      * @param param 用于设置视频编码器的相关参数，详情请参见 {@link TRTCVideoEncParam}。
+     * @note 从v11.5版本开始，编码输出分辨率会按照宽8高2字节对齐，并且是向下调整，eg:输入分辨率540x960，实际编码输出分辨率536x960。
      */
     virtual void setVideoEncoderParam(const TRTCVideoEncParam& param) = 0;
 
@@ -612,25 +609,6 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      * @param params 画面渲染参数，详情请参见 {@link TRTCRenderParams}。
      */
     virtual void setRemoteRenderParams(const char* userId, TRTCVideoStreamType streamType, const TRTCRenderParams& params) = 0;
-
-    /**
-     * 4.17 设置视频编码器输出的画面方向
-     *
-     * 该设置不影响本地画面的预览方向，但会影响房间中其他用户所观看到（以及云端录制文件）的画面方向。
-     * 当用户将手机或 Pad 上下颠倒时，由于摄像头的采集方向没有变，所以房间中其他用户所看到的画面会变成上下颠倒的，
-     * 在这种情况下，您可以通过调用该接口将 SDK 编码出的画面方向旋转180度，如此一来，房间中其他用户所看到的画面可保持正常的方向。
-     * 如果您希望实现上述这种友好的交互体验，我们更推荐您直接调用 {@link setGSensorMode} 实现更加智能的方向适配，无需您手动调用本接口。
-     * @param rotation 目前支持 0、90、180、270 两个旋转角度，默认值：TRTCVideoRotation_0，即不旋转。
-     */
-    virtual void setVideoEncoderRotation(TRTCVideoRotation rotation) = 0;
-
-    /**
-     * 4.18 设置编码器输出的画面镜像模式
-     *
-     * 该设置不影响本地画面的镜像模式，但会影响房间中其他用户所观看到（以及云端录制文件）的镜像模式。
-     * @param mirror 是否开启远端镜像，true：开启远端画面镜像；false：关闭远端画面镜像，默认值：false。
-     */
-    virtual void setVideoEncoderMirror(bool mirror) = 0;
 
     /**
      * 4.20 开启大小画面双路编码模式
@@ -668,6 +646,18 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
     virtual void snapshotVideo(const char* userId, TRTCVideoStreamType streamType, TRTCSnapshotSourceType sourceType) = 0;
 #endif
 
+    /**
+     * 4.25 设置重力感应的适配模式（11.7 及以上版本）
+     *
+     * 开启重力感应后，如果采集端的设备发生旋转，采集端和观众端的画面都会进行相应地渲染以确保视野中的画面始终朝上。
+     * 只在sdk内部摄像头采集场景生效，并且只在移动端生效。
+     * 1. 该接口仅对采集端起作用，如果只是观看房间中的画面，开启此接口是无效的
+     * 2. 当采集端设备发生 90 度或 270 度旋转时，采集端或者观众看到的画面可能会被裁剪以保持比例的协调
+     * @param mode 重力感应模式，详情请参见 {@link TRTCGravitySensorAdaptiveMode_Disable}、{@link TRTCGravitySensorAdaptiveMode_FillByCenterCrop} 和 {@link TRTCGravitySensorAdaptiveMode_FitWithBlackBorder} 默认值：{@link
+     * TRTCGravitySensorAdaptiveMode_Disable}。
+     */
+    virtual void setGravitySensorAdaptiveMode(TRTCGravitySensorAdaptiveMode mode) = 0;
+
     /////////////////////////////////////////////////////////////////////////////////
     //
     //                    音频相关接口函数
@@ -697,8 +687,8 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
     /**
      * 5.3 暂停/恢复发布本地的音频流
      *
-     * 当您暂停发布本地音频流之后，房间中的其他他用户会收到 {@link onUserAudioAvailable}(userId, false) 的通知。
-     * 当您恢复发布本地音频流之后，房间中的其他他用户会收到 {@link onUserAudioAvailable}(userId, true) 的通知。
+     * 当您暂停发布本地音频流之后，房间中的其他用户会收到 {@link onUserAudioAvailable}(userId, false) 的通知。
+     * 当您恢复发布本地音频流之后，房间中的其他用户会收到 {@link onUserAudioAvailable}(userId, true) 的通知。
      * 与 {@link stopLocalAudio} 的不同之处在于，muteLocalAudio(true) 并不会释放麦克风权限，而是继续发送码率极低的静音包。
      * 这对于需要云端录制的场景非常适用，因为 MP4 等格式的视频文件，对于音频数据的连续性要求很高，使用 {@link stopLocalAudio} 会导致录制出的 MP4 文件不易播放。
      * 因此在对录制文件的质量要求较高的场景中，建议选择 muteLocalAudio 而不建议使用 stopLocalAudio。
@@ -709,7 +699,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
     /**
      * 5.4 暂停/恢复播放远端的音频流
      *
-     * 当您静音某用户的远端音频时，SDK 会停止播放指定用户的声音，同时也会停止拉取该用户的音频数据数据。
+     * 当您静音某用户的远端音频时，SDK 会停止播放指定用户的声音，同时也会停止拉取该用户的音频数据。
      * @param userId 用于指定远端用户的 ID。
      * @param mute true：静音；false：取消静音。
      * @note 在进入房间（enterRoom）之前或之后调用本接口均生效，静音状态在退出房间（exitRoom）之后会被重置为 false。
@@ -776,8 +766,10 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      *
      * 当您调用该接口后， SDK 会将本地和远端的所有音频（包括本地音频，远端音频，背景音乐和音效等）混合并录制到一个本地文件中。
      * 该接口在进入房间前后调用均可生效，如果录制任务在退出房间前尚未通过 stopAudioRecording 停止，则退出房间后录制任务会自动被停止。
+     * 本次录制的启动、完成状态会通过本地录制相关回调进行通知。参见 TRTCCloud 相关回调。
      * @param param 录音参数，请参见 {@link TRTCAudioRecordingParams}。
      * @return 0：成功；-1：录音已开始；-2：文件或目录创建失败；-3：后缀指定的音频格式不支持。
+     * @note 自 v11.5 版本，音频录制的状态结果由返回值统一调整为异步回调进行通知。参见 TRTCCloud 相关回调。
      */
     virtual int startAudioRecording(const TRTCAudioRecordingParams& param) = 0;
 
@@ -919,7 +911,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
     virtual ITXAudioEffectManager* getAudioEffectManager() = 0;
 
 /**
- * 8.2 开启系统声音采集（仅适用于桌面系统）
+ * 8.2 开启系统声音采集（iOS 端暂未支持）
  *
  * 该接口会从电脑的声卡中采集音频数据，并将其混入到 SDK 当前的音频数据流中，从而使房间中的其他用户也能听到主播的电脑所播放出的声音。
  * 在线教育场景中，老师可以使用此功能让 SDK 采集教学影片中的声音，并广播给同房间中的学生。
@@ -934,7 +926,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
 #endif
 
 /**
- * 8.3 停止系统声音采集（仅适用于桌面系统和 Android 系统）
+ * 8.3 停止系统声音采集（iOS 端暂未支持）
  */
 #if TARGET_PLATFORM_DESKTOP
     virtual void stopSystemAudioLoopback() = 0;
@@ -979,6 +971,8 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
 
     /**
      * 9.3 暂停屏幕分享
+     *
+     * @note 从v11.5版本开始，暂停屏幕采集会使用最后一帧按照1fps帧率输出。
      */
     virtual void pauseScreenCapture() = 0;
 
@@ -1030,7 +1024,6 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      * - {@link setVideoEncoderParam} 用于设置主路画面（{@link TRTCVideoStreamTypeBig}，一般用于摄像头）的视频编码参数。
      * - {@link setSubStreamEncoderParam} 用于设置辅路画面（{@link TRTCVideoStreamTypeSub}，一般用于屏幕分享）的视频编码参数。
      * @param param 辅流编码参数，详情请参见 {@link TRTCVideoEncParam}。
-     * @note 即使您使用主路传输屏幕分享（在调用 startScreenCapture 时设置 type = TRTCVideoStreamTypeBig），依然要使用 {@link setSubStreamEncoderParam} 设定屏幕分享的编码参数，而不要使用 {@link setVideoEncoderParam} 。
      */
     virtual void setSubStreamEncoderParam(const TRTCVideoEncParam& param) = 0;
 
@@ -1169,7 +1162,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      * - channel：声道数（如果是立体声，数据是交叉的），单声道：1； 双声道：2。
      * - timestamp：时间戳，单位为毫秒（ms），请使用音频帧在采集时被记录下来的时间戳（可以在采集到一帧音频帧之后，通过调用 {@link generateCustomPTS} 获取时间戳）。
      *
-     * 参考文档：[自定义采集和渲染](https://cloud.tencent.com/document/product/647/34066)。
+     * 参考文档：[自定义采集和渲染](https://cloud.tencent.com/document/product/647/74692)。
      * @param frame 音频数据
      * @note 请您精准地按每帧时长的间隔调用本接口，数据投送间隔不均匀时极易触发声音卡顿。
      */
@@ -1265,7 +1258,7 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      * 10.11 设置远端视频自定义渲染回调
      *
      * 设置该回调之后，SDK 内部会跳过原来的渲染流程，并把采集到的数据回调出来，您需要自己完成画面渲染。
-     * - 您可以通过调用 setLocalVideoRenderCallback(TRTCVideoPixelFormat_Unknown, TRTCVideoBufferType_Unknown, nullptr) 停止回调。
+     * - 您可以通过调用 setRemoteVideoRenderCallback(TRTCVideoPixelFormat_Unknown, TRTCVideoBufferType_Unknown, nullptr) 停止回调。
      * - iOS、Mac、Windows 平台目前仅支持回调 {@link TRTCVideoPixelFormat_I420} 或 {@link TRTCVideoPixelFormat_BGRA32} 像素格式的视频帧。
      * - Android 平台目前仅支持传入 {@link TRTCVideoPixelFormat_I420}, {@link TRTCVideoPixelFormat_RGBA32} 或 {@link TRTCVideoPixelFormat_Texture_2D} 像素格式的视频帧。
      *
@@ -1515,7 +1508,8 @@ class ITRTCCloud : public IDeprecatedTRTCCloud {
      * 用户退出房间后，SDK 会自动关闭私有加密。如需重新开启私有加密，您需要在用户再次加入房间前调用该方法。
      * @param enabled 是否开启媒体流私有加密。
      * @param config 配置媒体流私有加密的算法和密钥，参见 {@link TRTCPayloadPrivateEncryptionConfig}。
-     * @return 接口调用结果，0: 方法调用成功， -1: 传入参数无效， -2: 功能已过期。若需解锁：请前往中国大陆站点开通 [TRTC 旗舰版套餐](https://buy.cloud.tencent.com/trtc?tab=month&trtcversion=ultimate)。
+     * @return 接口调用结果，0: 方法调用成功， -1: 传入参数无效， -2: 功能已过期。若需解锁：请前往中国大陆站点开通 [TRTC 旗舰版套餐](https://buy.cloud.tencent.com/trtc?tab=month&trtcversion=ultimate)，并填写
+     * [申请](https://cloud.tencent.com/apply/p/diifjcmffhw)，审核通过后方可使用。
      * @note TRTC 已经内置对媒体流进行加密后再传输，启用媒体流私有加密后将使用您传入的密匙与初始向量进行再次加密。
      */
     virtual int enablePayloadPrivateEncryption(bool enabled, const TRTCPayloadPrivateEncryptionConfig& config) = 0;

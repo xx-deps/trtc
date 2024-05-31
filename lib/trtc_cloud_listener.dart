@@ -553,10 +553,10 @@ enum TRTCCloudListener {
 
 /// @nodoc
 /// Listener object
-class TRTCCloudListenerObj {
+class TRTCCloudListenerWrapper {
   Set<ListenerValue> listeners = Set();
 
-  TRTCCloudListenerObj(MethodChannel channel) {
+  TRTCCloudListenerWrapper(MethodChannel channel) {
     channel.setMethodCallHandler((methodCall) async {
       var arguments;
       if (!kIsWeb && Platform.isWindows) {
@@ -623,16 +623,17 @@ class TRTCAudioFrameListener {
 
 /// @nodoc
 class TRTCAudioFrameListenerPlatformMethod {
-  static final TRTCAudioFrameListenerPlatformMethod _instance = TRTCAudioFrameListenerPlatformMethod();
-  static TRTCAudioFrameListenerPlatformMethod get instance => _instance;
-
-  final _basicMessageChannel = BasicMessageChannel('trtcCloudChannelAudioFrame', JSONMessageCodec());
+  BasicMessageChannel? _basicMessageChannel;
   TRTCAudioFrameListener? _listener;
+
+  TRTCAudioFrameListenerPlatformMethod(String channelName) {
+    _basicMessageChannel = BasicMessageChannel(channelName + "_basic_channel", JSONMessageCodec());
+  }
 
   Future<void> setAudioFrameListener(TRTCAudioFrameListener? listener) async {
     if (listener != null) {
       _listener = listener;
-      _basicMessageChannel.setMessageHandler((message) async {
+      _basicMessageChannel!.setMessageHandler((message) async {
         message as Map<String, dynamic>;
         _handleArguments(message);
       });

@@ -1,3 +1,14 @@
+## 2.7.8
+### Dependency Notes
+- Windows SDK update to 11.7.0.14863
+- MacOS SDK update to 11.7.15304
+- Android SDK update to 11.7.0.13910
+- iOS SDK update to 11.7.15343
+### Feature
+- Android&iOS: Newly added `createSubCloud` and `destroySubCloud` API
+### Bug Fix
+- Windows: Fixed `onRecvCustomCmdMsg` callback data parsing error problem
+
 ## 2.7.7
 ### Bug Fix
 - Web: Fixed the issue where the switchRole call was invalid.

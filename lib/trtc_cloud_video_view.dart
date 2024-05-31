@@ -311,9 +311,11 @@ class TRTCCloudVideoViewController {
   /// frontCamera true: front camera; false: rear camera.
   Future<void> startLocalPreview(
     bool frontCamera, // true: front camera; false: rear camera.
+    String channelName,
   ) {
     return _channel.invokeMethod('startLocalPreview', {
       "frontCamera": frontCamera,
+      "channelName" : channelName,
     });
   }
 
@@ -322,9 +324,10 @@ class TRTCCloudVideoViewController {
   /// **Parameters:**
   ///
   /// viewId Control that carries the video image
-  Future<void> updateLocalView(int viewId) {
+  Future<void> updateLocalView(int viewId, String channelName) {
     return _channel.invokeMethod('updateLocalView', {
       "viewId": viewId,
+      "channelName" : channelName,
     });
   }
 
@@ -337,10 +340,13 @@ class TRTCCloudVideoViewController {
   /// streamType: video stream type of the `userId` specified for watching
   ///
   /// viewId Control that carries the video image
-  Future<void> updateRemoteView(String userId, int streamType, int viewId) {
-    return _channel.invokeMethod(
-      'updateRemoteView',
-      {"viewId": viewId, "streamType": streamType, "userId": userId},
+  Future<void> updateRemoteView(String userId, int streamType, int viewId, String channelName) {
+    return _channel.invokeMethod('updateRemoteView', {
+      "viewId": viewId,
+      "streamType": streamType,
+      "userId": userId,
+      "channelName" : channelName,
+    },
     );
   }
 
@@ -357,8 +363,11 @@ class TRTCCloudVideoViewController {
   ///* Smooth big image:TRTCCloudDef.TRTC_VIDEO_STREAM_TYPE_SMALL
   ///
   ///* Substream (screen sharing): TRTCCloudDe.TRTC_VIDEO_STREAM_TYPE_SUB
-  Future<void> startRemoteView(String userId, int streamType) {
-    return _channel.invokeMethod(
-        'startRemoteView', {"userId": userId, "streamType": streamType});
+  Future<void> startRemoteView(String userId, int streamType, String channelName) {
+    return _channel.invokeMethod('startRemoteView', {
+      "userId": userId,
+      "streamType": streamType,
+      "channelName" : channelName,
+    });
   }
 }

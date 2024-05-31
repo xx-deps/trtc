@@ -34,6 +34,10 @@ public class CustomTRTCCloudListener extends TRTCCloudListener {
         this.channel = channel;
     }
 
+    public void release() {
+        channel = null;
+    }
+
     /**
      * 调用监听器
      *

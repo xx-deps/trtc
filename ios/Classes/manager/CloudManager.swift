@@ -15,13 +15,18 @@ class CloudManager {
     private var beautyInstance: ITXCustomBeautyProcesser? = nil
     private var audioFrameListener: TRTCAudioFrameDelegate?
     
-    private let txCloudManager: TRTCCloud = TRTCCloud.sharedInstance()
+    private let txCloudManager: TRTCCloud
     
-    init(registrar: FlutterPluginRegistrar, channel: FlutterMethodChannel, basicChannel: FlutterBasicMessageChannel){
+    init(registrar: FlutterPluginRegistrar, channel: FlutterMethodChannel, basicChannel: FlutterBasicMessageChannel, cloud: TRTCCloud){
         self.channel = channel
         self.basicChannel = basicChannel
         tRegistrar = registrar
         _textures = registrar.textures()
+        txCloudManager = cloud
+    }
+    
+    public func getTRTCCloud() -> TRTCCloud {
+        return txCloudManager
     }
     
 	/**
@@ -37,8 +42,8 @@ class CloudManager {
 	* 调用此接口后，SDK 会停止接收该用户的远程视频流，同时会清理相关的视频显示资源。
 	*/
 	public func stopRemoteView(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		   let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		   let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
 			txCloudManager.stopRemoteView(userId, streamType: TRTCVideoStreamType(rawValue: streamType)!)
 			result(nil)
 		}
@@ -48,18 +53,38 @@ class CloudManager {
 	* 显示仪表盘
 	*/
 	public func showDebugView(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let mode = CommonUtils.getParamByKey(call: call, result: result, param: "mode") as? Int {
+		if let mode = Utils.getParamByKey(call: call, result: result, param: "mode") as? Int {
 			txCloudManager.showDebugView(mode)
 			result(nil)
 		}
 	}
+    
+    public func createSubCloud(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if let name = Utils.getParamByKey(call: call, result: result, param: "channelName") as? String {
+            let cloud = txCloudManager.createSub()
+            let trtc = TRTCCloudWrapper(channelName: name, registrar: tRegistrar, cloud: cloud)
+            TRTCCloudWrapper.cloudMap[name] = trtc
+            result(nil)
+        }
+    }
+    
+    public func destroySubCloud(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        if let name = Utils.getParamByKey(call: call, result: result, param: "channelName") as? String {
+            if let manager = TRTCCloudWrapper.cloudMap[name] {
+                txCloudManager.destroySubCloud(manager.getTRTCCloud())
+                manager.release(channelName: name)
+                result(nil)
+            }
+        }
+    }
+    
 	
 	/**
 	* 进入房间
 	* 调用接口后，您会收到来自 TRTCCloudListener 中的 onEnterRoom(result) 回调：
 	*/
 	public func enterRoom(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		let param = JsonUtil.getDictionaryFromJSONString(jsonString: (CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String)!)
+		let param = JsonUtil.getDictionaryFromJSONString(jsonString: (Utils.getParamByKey(call: call, result: result, param: "param") as? String)!)
 		let scene = ((call.arguments as! [String: Any])["scene"]) as? Int
 		
 		if let sdkAppId = param["sdkAppId"] as? UInt32,
@@ -102,7 +127,7 @@ class CloudManager {
 	* 跨房通话
 	*/
 	public func connectOtherRoom(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let param = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String {
+		if let param = Utils.getParamByKey(call: call, result: result, param: "param") as? String {
 			txCloudManager.connectOtherRoom(param)
 			result(nil)
 		}
@@ -120,7 +145,7 @@ class CloudManager {
 	* 切换房间
 	*/
 	public func switchRoom(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		let config = JsonUtil.getDictionaryFromJSONString(jsonString: (CommonUtils.getParamByKey(call: call, result: result, param: "config") as? String)!)
+		let config = JsonUtil.getDictionaryFromJSONString(jsonString: (Utils.getParamByKey(call: call, result: result, param: "config") as? String)!)
 		
 		if let userSig = config["userSig"] as? String,
 		   let roomId = config["roomId"] as? UInt32,
@@ -141,7 +166,7 @@ class CloudManager {
 	* 切换角色，仅适用于直播场景（TRTC_APP_SCENE_LIVE 和 TRTC_APP_SCENE_VOICE_CHATROOM）
 	*/
 	public func switchRole(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let role = CommonUtils.getParamByKey(call: call, result: result, param: "role") as? Int {
+		if let role = Utils.getParamByKey(call: call, result: result, param: "role") as? Int {
 			txCloudManager.switch(TRTCRoleType(rawValue: role)!)
 			result(nil)
 		}
@@ -151,8 +176,8 @@ class CloudManager {
 	* 设置音视频数据接收模式，需要在进房前设置才能生效
 	*/
 	public func setDefaultStreamRecvMode(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let autoRecvAudio = CommonUtils.getParamByKey(call: call, result: result, param: "autoRecvAudio") as? Bool,
-		   let autoRecvVideo = CommonUtils.getParamByKey(call: call, result: result, param: "autoRecvVideo") as? Bool {
+		if let autoRecvAudio = Utils.getParamByKey(call: call, result: result, param: "autoRecvAudio") as? Bool,
+		   let autoRecvVideo = Utils.getParamByKey(call: call, result: result, param: "autoRecvVideo") as? Bool {
 			txCloudManager.setDefaultStreamRecvMode(autoRecvAudio, video: autoRecvVideo)
 			result(nil)
 		}
@@ -162,8 +187,8 @@ class CloudManager {
 	* 静音/取消静音指定的远端用户的声音
 	*/
 	public func muteRemoteAudio(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		   let mute = CommonUtils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		   let mute = Utils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
 			txCloudManager.muteRemoteAudio(userId, mute: mute)
 			result(nil)
 		}
@@ -173,7 +198,7 @@ class CloudManager {
 	* 静音/取消静音所有用户的声音
 	*/
 	public func muteAllRemoteAudio(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let mute = CommonUtils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
+		if let mute = Utils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
 			txCloudManager.muteAllRemoteAudio(mute)
 			result(nil)
 		}
@@ -183,7 +208,7 @@ class CloudManager {
 	* 设置采集音量
 	*/
 	public func setAudioCaptureVolume(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let volume = CommonUtils.getParamByKey(call: call, result: result, param: "volume") as? Int {
+		if let volume = Utils.getParamByKey(call: call, result: result, param: "volume") as? Int {
 			txCloudManager.setAudioCaptureVolume(volume)
 			result(nil)
 		}
@@ -193,8 +218,8 @@ class CloudManager {
 	* 设置某个远程用户的播放音量
 	*/
 	public func setRemoteAudioVolume(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		   let volume = CommonUtils.getParamByKey(call: call, result: result, param: "volume") as? Int32 {
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		   let volume = Utils.getParamByKey(call: call, result: result, param: "volume") as? Int32 {
 			txCloudManager.setRemoteAudioVolume(userId, volume: volume)
 			result(nil)
 		}
@@ -204,7 +229,7 @@ class CloudManager {
 	* 设置播放音量
 	*/
 	public func setAudioPlayoutVolume(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let volume = CommonUtils.getParamByKey(call: call, result: result, param: "volume") as? Int {
+		if let volume = Utils.getParamByKey(call: call, result: result, param: "volume") as? Int {
 			txCloudManager.setAudioPlayoutVolume(volume)
 			result(nil)
 		}
@@ -230,7 +255,7 @@ class CloudManager {
 	* 开启本地音频的采集和上行
 	*/
 	public func startLocalAudio(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let quality = CommonUtils.getParamByKey(call: call, result: result, param: "quality") as? Int {
+		if let quality = Utils.getParamByKey(call: call, result: result, param: "quality") as? Int {
 			txCloudManager.startLocalAudio(TRTCAudioQuality(rawValue: quality)!)
 			result(nil)
 		}
@@ -248,7 +273,7 @@ class CloudManager {
 	* 本地视频渲染设置
 	*/
 	public func setLocalRenderParams(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let param = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String {
+		if let param = Utils.getParamByKey(call: call, result: result, param: "param") as? String {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: param)
 			let data = TRTCRenderParams()
 			if dict["rotation"] != nil {
@@ -269,9 +294,9 @@ class CloudManager {
 	* 远程视频渲染设置
 	*/
 	public func setRemoteRenderParams(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		   let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
-		   let param = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String {
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		   let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
+		   let param = Utils.getParamByKey(call: call, result: result, param: "param") as? String {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: param)
 			let data = TRTCRenderParams()
 			if dict["rotation"] != nil {
@@ -300,8 +325,8 @@ class CloudManager {
 	* 暂停/恢复接收指定的远端视频流
 	*/
 	public func muteRemoteVideoStream(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		   let mute = CommonUtils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		   let mute = Utils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
 			txCloudManager.muteRemoteVideoStream(userId, mute: mute)
 			result(nil)
 		}
@@ -311,7 +336,7 @@ class CloudManager {
 	* 暂停/恢复接收所有远端视频流
 	*/
 	public func muteAllRemoteVideoStreams(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let mute = CommonUtils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
+		if let mute = Utils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
 			txCloudManager.muteAllRemoteVideoStreams(mute)
 			result(nil)
 		}
@@ -321,7 +346,7 @@ class CloudManager {
 	* 设置视频编码器相关参数
 	*/
 	public func setVideoEncoderParam(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let param = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String {
+		if let param = Utils.getParamByKey(call: call, result: result, param: "param") as? String {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: param)
 			let data = TRTCVideoEncParam()
 			if dict["videoBitrate"] != nil {
@@ -351,8 +376,8 @@ class CloudManager {
 	* 开始向腾讯云的直播 CDN 推流
 	*/
 	public func startPublishing(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
-		   let streamId = CommonUtils.getParamByKey(call: call, result: result, param: "streamId") as? String {
+		if let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
+		   let streamId = Utils.getParamByKey(call: call, result: result, param: "streamId") as? String {
 			txCloudManager.startPublishing(streamId, type: TRTCVideoStreamType(rawValue: streamType)!)
 			result(nil)
 			
@@ -363,7 +388,7 @@ class CloudManager {
 	* 开始向腾讯云的直播 CDN 推流
 	*/
 	public func startPublishCDNStream(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		let param = JsonUtil.getDictionaryFromJSONString(jsonString: (CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String)!)
+		let param = JsonUtil.getDictionaryFromJSONString(jsonString: (Utils.getParamByKey(call: call, result: result, param: "param") as? String)!)
 		
 		if let appId = param["appId"] as? Int32,
 		   let bizId = param["bizId"] as? Int32,
@@ -398,7 +423,7 @@ class CloudManager {
 	* 设置云端的混流转码参数
 	*/
 	public func setMixTranscodingConfig(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let param = CommonUtils.getParamByKey(call: call, result: result, param: "config") as? String {
+		if let param = Utils.getParamByKey(call: call, result: result, param: "config") as? String {
             if(param == "null") {
                 txCloudManager.setMix(nil)
             } else {
@@ -463,7 +488,7 @@ class CloudManager {
 	* 设置网络流控相关参数
 	*/
 	public func setNetworkQosParam(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let param = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String {
+		if let param = Utils.getParamByKey(call: call, result: result, param: "param") as? String {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: param)
 			let param = TRTCNetworkQosParam()
 			
@@ -482,7 +507,7 @@ class CloudManager {
 	/// 开启/关闭自定义视频处理。
     var localProcess:ProcessVideoFrame?
     func enableCustomVideoProcess(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let enable = CommonUtils.getParamByKey(call: call, result: result, param: "enable") as? Bool {
+        if let enable = Utils.getParamByKey(call: call, result: result, param: "enable") as? Bool {
 			let customBeautyInstance = TencentTRTCCloud.getBeautyInstance()
 			beautyInstance = customBeautyInstance!.createCustomBeautyProcesser()
 			let pixelFormat = beautyInstance!.getSupportedPixelFormat()
@@ -510,9 +535,9 @@ class CloudManager {
 	* 设置暂停推送本地视频时要推送的图片
 	*/
 	public func setVideoMuteImage(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		let imageUrl = CommonUtils.getParamByKeyCanBeNull(call: call, result: result, param: "imageUrl") as? String
-		if 	let fps = CommonUtils.getParamByKey(call: call, result: result, param: "fps") as? Int,
-			   let type = CommonUtils.getParamByKey(call: call, result: result, param: "type") as? String {
+		let imageUrl = Utils.getParamByKeyCanBeNull(call: call, result: result, param: "imageUrl") as? String
+		if 	let fps = Utils.getParamByKey(call: call, result: result, param: "fps") as? Int,
+			   let type = Utils.getParamByKey(call: call, result: result, param: "type") as? String {
 			if(imageUrl == nil) {
 				// txCloudManager.setVideoMuteImage(nil, fps: fps)
 			} else {
@@ -537,7 +562,7 @@ class CloudManager {
 	* 设置视频编码输出的画面方向，即设置远端用户观看到的和服务器录制的画面方向
 	*/
 	public func setVideoEncoderRotation(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let rotation = CommonUtils.getParamByKey(call: call, result: result, param: "rotation") as? Int {
+		if let rotation = Utils.getParamByKey(call: call, result: result, param: "rotation") as? Int {
 			txCloudManager.setVideoEncoderRotation(TRTCVideoRotation(rawValue: rotation)!)
 			result(nil)
 		}
@@ -547,7 +572,7 @@ class CloudManager {
 	* 设置编码器输出的画面镜像模式
 	*/
 	public func setVideoEncoderMirror(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let mirror = CommonUtils.getParamByKey(call: call, result: result, param: "mirror") as? Bool {
+		if let mirror = Utils.getParamByKey(call: call, result: result, param: "mirror") as? Bool {
 			txCloudManager.setVideoEncoderMirror(mirror)
 			result(nil)
 		}
@@ -557,7 +582,7 @@ class CloudManager {
 	* 设置重力感应的适应模式
 	*/
 	public func setGSensorMode(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let mode = CommonUtils.getParamByKey(call: call, result: result, param: "mode") as? Int {
+		if let mode = Utils.getParamByKey(call: call, result: result, param: "mode") as? Int {
 			txCloudManager.setGSensorMode(TRTCGSensorMode(rawValue: mode)!)
 			result(nil)
 		}
@@ -567,8 +592,8 @@ class CloudManager {
 	* 开启大小画面双路编码模式
 	*/
 	public func enableEncSmallVideoStream(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let enable = CommonUtils.getParamByKey(call: call, result: result, param: "enable") as? Bool,
-		   let smallVideoEncParam = CommonUtils.getParamByKey(call: call, result: result, param: "smallVideoEncParam") as? String {
+		if let enable = Utils.getParamByKey(call: call, result: result, param: "enable") as? Bool,
+		   let smallVideoEncParam = Utils.getParamByKey(call: call, result: result, param: "smallVideoEncParam") as? String {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: smallVideoEncParam)
 			let data = TRTCVideoEncParam()
 			if !(dict["videoBitrate"] is NSNull) &&  dict["videoBitrate"] != nil {
@@ -593,8 +618,8 @@ class CloudManager {
 	* 选定观看指定 uid 的大画面或小画面
 	*/
 	public func setRemoteVideoStreamType(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		   let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
+		if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		   let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
 			txCloudManager.setRemoteVideoStreamType(userId, type: TRTCVideoStreamType(rawValue: streamType)!)
 			result(nil)
 		}
@@ -604,10 +629,10 @@ class CloudManager {
 	* 视频画面截图
 	*/
 	public func snapshotVideo(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String
-		if let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
-		   let sourceType = CommonUtils.getParamByKey(call: call, result: result, param: "sourceType") as? UInt,
-		   let path = CommonUtils.getParamByKey(call: call, result: result, param: "path") as? String {
+		let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String
+		if let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
+		   let sourceType = Utils.getParamByKey(call: call, result: result, param: "sourceType") as? UInt,
+		   let path = Utils.getParamByKey(call: call, result: result, param: "path") as? String {
 			
 			txCloudManager.snapshotVideo(userId, type: TRTCVideoStreamType(rawValue: streamType)!,
                                          sourceType: TRTCSnapshotSourceType(rawValue: sourceType)!,
@@ -625,13 +650,13 @@ class CloudManager {
 				if(data != nil) {
 				do {
                     try data!.write(to: url)
-                    TencentTRTCCloud.invokeListener(channel: self.channel,
+                    Utils.invokeListener(channel: self.channel,
                                                     type: ListenerType.onSnapshotComplete,
                                                     params: ["errCode": 0,
                                                              "path": path] as [String : Any])
 				} catch {
-					CommonUtils.logError(call: call, errCode: -1, errMsg: "\(error)")
-                    TencentTRTCCloud.invokeListener(channel: self.channel,
+					Utils.logError(call: call, errCode: -1, errMsg: "\(error)")
+                    Utils.invokeListener(channel: self.channel,
                                                     type: ListenerType.onSnapshotComplete,
                                                     params: ["errCode": -1,
                                                              "errMsg": "\(error)",
@@ -647,7 +672,7 @@ class CloudManager {
 	* 静音/取消静音本地的音频
 	*/
 	public func muteLocalAudio(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let mute = CommonUtils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
+		if let mute = Utils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
 			txCloudManager.muteLocalAudio(mute)
 			result(nil)
 		}
@@ -657,7 +682,7 @@ class CloudManager {
 	* 暂停/恢复推送本地的视频数据
 	*/
 	public func muteLocalVideo(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let mute = CommonUtils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
+		if let mute = Utils.getParamByKey(call: call, result: result, param: "mute") as? Bool {
 			txCloudManager.muteLocalVideo(mute)
 			result(nil)
 		}
@@ -667,7 +692,7 @@ class CloudManager {
 	* 启用音量大小提示
 	*/
 	public func enableAudioVolumeEvaluation(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let intervalMs = CommonUtils.getParamByKey(call: call, result: result, param: "intervalMs") as? UInt {
+		if let intervalMs = Utils.getParamByKey(call: call, result: result, param: "intervalMs") as? UInt {
 			txCloudManager.enableAudioVolumeEvaluation(intervalMs)
 			result(nil)
 		}
@@ -677,7 +702,7 @@ class CloudManager {
 	* 开始录音
 	*/
 	public func startAudioRecording(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let param = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String {
+		if let param = Utils.getParamByKey(call: call, result: result, param: "param") as? String {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: param)
 			let data = TRTCAudioRecordingParams()
 			data.filePath = dict["filePath"] as! String
@@ -695,7 +720,7 @@ class CloudManager {
 	}
 
 	public func startLocalRecording(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let param = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? String {
+        if let param = Utils.getParamByKey(call: call, result: result, param: "param") as? String {
             let dict = JsonUtil.getDictionaryFromJSONString(jsonString: param)
             let data = TRTCLocalRecordingParams()
             data.filePath = dict["filePath"] as! String
@@ -722,12 +747,12 @@ class CloudManager {
 	* 设置水印
 	*/
 	public func setWatermark(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let imageUrl = CommonUtils.getParamByKey(call: call, result: result, param: "imageUrl") as? String,
-		   let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
-		   let x = CommonUtils.getParamByKey(call: call, result: result, param: "x") as? String,
-		   let y = CommonUtils.getParamByKey(call: call, result: result, param: "y") as? String,
-		   let width = CommonUtils.getParamByKey(call: call, result: result, param: "width") as? String,
-		   let type = CommonUtils.getParamByKey(call: call, result: result, param: "type") as? String {
+		if let imageUrl = Utils.getParamByKey(call: call, result: result, param: "imageUrl") as? String,
+		   let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int,
+		   let x = Utils.getParamByKey(call: call, result: result, param: "x") as? String,
+		   let y = Utils.getParamByKey(call: call, result: result, param: "y") as? String,
+		   let width = Utils.getParamByKey(call: call, result: result, param: "width") as? String,
+		   let type = Utils.getParamByKey(call: call, result: result, param: "type") as? String {
 			
 			let fx = CGFloat.init(Float.init(x)!)
 			let fy = CGFloat.init(Float.init(y)!)
@@ -754,8 +779,8 @@ class CloudManager {
 	* 开始应用内的屏幕分享（该接口仅支持 iOS 13.0 及以上的 iPhone 和 iPad）
 	*/
 	public func startScreenCaptureInApp(call: FlutterMethodCall, result: @escaping FlutterResult){
-		if let encParams = CommonUtils.getParamByKey(call: call, result: result, param: "encParams") as? String,
-			let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int  {
+		if let encParams = Utils.getParamByKey(call: call, result: result, param: "encParams") as? String,
+			let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int  {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: encParams)
 			let data = TRTCVideoEncParam()
 			if dict["videoResolution"] != nil {
@@ -786,9 +811,9 @@ class CloudManager {
 	* 开始全系统的屏幕分享（该接口支持 iOS 11.0 及以上的 iPhone 和 iPad）
 	*/
 	public func startScreenCaptureByReplaykit(call: FlutterMethodCall, result: @escaping FlutterResult){
-		let appGroup = CommonUtils.getParamByKey(call: call, result: result, param: "appGroup") as! String
-		if let encParams = CommonUtils.getParamByKey(call: call, result: result, param: "encParams") as? String,
-			let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
+		let appGroup = Utils.getParamByKey(call: call, result: result, param: "appGroup") as! String
+		if let encParams = Utils.getParamByKey(call: call, result: result, param: "encParams") as? String,
+			let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
 			let dict = JsonUtil.getDictionaryFromJSONString(jsonString: encParams)
 			let data = TRTCVideoEncParam()
 			if dict["videoResolution"] != nil {
@@ -860,10 +885,10 @@ class CloudManager {
 	* 发送自定义消息给房间内所有用户
 	*/
 	public func sendCustomCmdMsg(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let cmdID = CommonUtils.getParamByKey(call: call, result: result, param: "cmdID") as? Int,
-		   let dataStr = CommonUtils.getParamByKey(call: call, result: result, param: "data") as? String,
-		   let reliable = CommonUtils.getParamByKey(call: call, result: result, param: "reliable") as? Bool,
-		   let ordered = CommonUtils.getParamByKey(call: call, result: result, param: "ordered") as? Bool {
+		if let cmdID = Utils.getParamByKey(call: call, result: result, param: "cmdID") as? Int,
+		   let dataStr = Utils.getParamByKey(call: call, result: result, param: "data") as? String,
+		   let reliable = Utils.getParamByKey(call: call, result: result, param: "reliable") as? Bool,
+		   let ordered = Utils.getParamByKey(call: call, result: result, param: "ordered") as? Bool {
 			let nsdata = dataStr.data(using: String.Encoding.utf8)
 			result(txCloudManager.sendCustomCmdMsg(cmdID, data: nsdata!, reliable: reliable, ordered: ordered))
 		}
@@ -873,8 +898,8 @@ class CloudManager {
 	* 将小数据量的自定义数据嵌入视频帧中
 	*/
 	public func sendSEIMsg(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if  let dataStr = CommonUtils.getParamByKey(call: call, result: result, param: "data") as? String,
-			let repeatCount = CommonUtils.getParamByKey(call: call, result: result, param: "repeatCount") as? Int32 {
+		if  let dataStr = Utils.getParamByKey(call: call, result: result, param: "data") as? String,
+			let repeatCount = Utils.getParamByKey(call: call, result: result, param: "repeatCount") as? Int32 {
 			let nsdata = dataStr.data(using: String.Encoding.utf8)
 			result(txCloudManager.sendSEIMsg(nsdata!, repeatCount: repeatCount))
 		}
@@ -884,9 +909,9 @@ class CloudManager {
 	* 开始进行网络测速（视频通话期间请勿测试，以免影响通话质量）
 	*/
 	public func startSpeedTest(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let sdkAppId = CommonUtils.getParamByKey(call: call, result: result, param: "sdkAppId") as? UInt32,
-		   let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		   let userSig = CommonUtils.getParamByKey(call: call, result: result, param: "userSig") as? String {
+		if let sdkAppId = Utils.getParamByKey(call: call, result: result, param: "sdkAppId") as? UInt32,
+		   let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		   let userSig = Utils.getParamByKey(call: call, result: result, param: "userSig") as? String {
 			// txCloudManager.startSpeedTest(sdkAppId, userId: userId, userSig: userSig, completion: {
 			// 	(result, completedCount, totalCount) -> Void in
       //           TencentTRTCCloud.invokeListener(type: ListenerType.onSpeedTest, params: ["currentResult":(result! as TRTCSpeedTestResult).quality.rawValue,"finishedCount":completedCount,"totalCount":totalCount])
@@ -896,7 +921,7 @@ class CloudManager {
                                       userSig: userSig,
                                       completion: { [weak self] (result, completedCount, totalCount) -> Void in
             guard let self = self else { return }
-            TencentTRTCCloud.invokeListener(channel: self.channel,
+            Utils.invokeListener(channel: self.channel,
                                             type: ListenerType.onSpeedTest,
                                             params: ["currentResult":["quality":(result as TRTCSpeedTestResult).quality.rawValue,
                                                                       "success":(result as TRTCSpeedTestResult).success,
@@ -926,7 +951,7 @@ class CloudManager {
     * 调用实验性 API 接口
     */
     public func callExperimentalAPI(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let jsonStr = CommonUtils.getParamByKey(call: call, result: result, param: "jsonStr") as? String {
+        if let jsonStr = Utils.getParamByKey(call: call, result: result, param: "jsonStr") as? String {
             txCloudManager.callExperimentalAPI(jsonStr)
             result(nil)
         }
@@ -953,7 +978,7 @@ class CloudManager {
     
     var localRender:TencentVideoTextureRender?
     public func setLocalVideoRenderListener(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let frontCamera = CommonUtils.getParamByKey(call: call, result: result, param: "isFront") as? Bool{
+        if let frontCamera = Utils.getParamByKey(call: call, result: result, param: "isFront") as? Bool{
             txCloudManager.startLocalPreview(frontCamera, view: nil)
             self.localRender = TencentVideoTextureRender(self._textures, userId: "", streamType: .big)
             txCloudManager.setLocalVideoRenderDelegate(self.localRender, pixelFormat: ._NV12, bufferType: .pixelBuffer)
@@ -963,7 +988,7 @@ class CloudManager {
     }
 
 		public func setLocalVideoProcessListener(call: FlutterMethodCall, result: @escaping FlutterResult) {
-			if let frontCamera = CommonUtils.getParamByKey(call: call, result: result, param: "isFront") as? Bool{
+			if let frontCamera = Utils.getParamByKey(call: call, result: result, param: "isFront") as? Bool{
 				txCloudManager.startLocalPreview(frontCamera, view: nil)
 				self.localRender = TencentVideoTextureRender(self._textures, userId: "", streamType: .big)
 				txCloudManager.setLocalVideoProcessDelegete(self.localRender, pixelFormat: ._NV12, bufferType: .pixelBuffer)
@@ -974,8 +999,8 @@ class CloudManager {
 
     var remoteRender:TencentVideoTextureRender?
     public func setRemoteVideoRenderListener(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-         let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
+        if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+         let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
             txCloudManager.startRemoteView(userId,
                                            streamType: TRTCVideoStreamType(rawValue: streamType) ?? .big,
                                            view: nil)
@@ -991,7 +1016,7 @@ class CloudManager {
     * 开启本地视频采集。
     */
     public func startLocalPreview(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let frontCamera = CommonUtils.getParamByKey(call: call, result: result, param: "isFront") as? Bool{
+        if let frontCamera = Utils.getParamByKey(call: call, result: result, param: "isFront") as? Bool{
             txCloudManager.startLocalPreview(frontCamera, view: nil)
             result(nil)
         }
@@ -1020,15 +1045,15 @@ class CloudManager {
     * 开启远端视频采集。
     */
     public func startRemoteView(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let userId = CommonUtils.getParamByKey(call: call, result: result, param: "userId") as? String,
-		let streamType = CommonUtils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
+        if let userId = Utils.getParamByKey(call: call, result: result, param: "userId") as? String,
+		let streamType = Utils.getParamByKey(call: call, result: result, param: "streamType") as? Int {
             txCloudManager.startRemoteView(userId,streamType:TRTCVideoStreamType(rawValue: streamType)!, view: nil)
             result(nil)
         }
     }
     
     public func unregisterTexture(call: FlutterMethodCall, result: @escaping FlutterResult){
-        if let textureID = CommonUtils.getParamByKey(call: call, result: result, param: "textureID") as? Int64 {
+        if let textureID = Utils.getParamByKey(call: call, result: result, param: "textureID") as? Int64 {
             do {
                  self._textures.unregisterTexture(textureID)
             } catch {
@@ -1039,7 +1064,7 @@ class CloudManager {
     }
     
     public func setSystemAudioLoopbackVolume(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        if let volume = CommonUtils.getParamByKey(call: call, result: result, param: "volume") as? UInt32 {
+        if let volume = Utils.getParamByKey(call: call, result: result, param: "volume") as? UInt32 {
             txCloudManager.setSystemAudioLoopbackVolume(volume)
         }
     }
@@ -1049,15 +1074,15 @@ class CloudManager {
         var encoderParam: TRTCStreamEncoderParam?
         var mixingConfig: TRTCStreamMixingConfig?
         
-        if let targetDic = CommonUtils.getParamByKey(call: call, result: result, param: "target") as? [String: Any] {
+        if let targetDic = Utils.getParamByKey(call: call, result: result, param: "target") as? [String: Any] {
             target = getTRTCPublishTargetFromDic(targetDic: targetDic)
         }
         
-        if let encoderParamDic = CommonUtils.getParamByKey(call: call, result: result, param: "param") as? [String: Any] {
+        if let encoderParamDic = Utils.getParamByKey(call: call, result: result, param: "param") as? [String: Any] {
             encoderParam = getTRTCStreamEncoderParamFromDic(encoderParamDic: encoderParamDic)
         }
         
-        if let mixingConfigDic = CommonUtils.getParamByKey(call: call, result: result, param: "config") as? [String: Any] {
+        if let mixingConfigDic = Utils.getParamByKey(call: call, result: result, param: "config") as? [String: Any] {
             mixingConfig = getTRTCStreamMixingConfigFromDic(mixingConfigDic: mixingConfigDic)
         }
 
@@ -1070,17 +1095,17 @@ class CloudManager {
         var encoderParam: TRTCStreamEncoderParam?
         var mixingConfig: TRTCStreamMixingConfig?
         
-        guard let taskId = CommonUtils.getParamByKey(call: call, result: result, param: "taskId") as? String else { return }
+        guard let taskId = Utils.getParamByKey(call: call, result: result, param: "taskId") as? String else { return }
         
-        if let publishTargetDic = CommonUtils.getParamByKey(call: call, result: result, param: "target") as? [String: Any] {
+        if let publishTargetDic = Utils.getParamByKey(call: call, result: result, param: "target") as? [String: Any] {
             publishTarget = getTRTCPublishTargetFromDic(targetDic: publishTargetDic)
         }
         
-        if let encoderParamDic = CommonUtils.getParamByKey(call: call, result: result, param: "encoderParam") as? [String: Any] {
+        if let encoderParamDic = Utils.getParamByKey(call: call, result: result, param: "encoderParam") as? [String: Any] {
             encoderParam = getTRTCStreamEncoderParamFromDic(encoderParamDic: encoderParamDic)
         }
         
-        if let mixingConfigDic = CommonUtils.getParamByKey(call: call, result: result, param: "mixingConfig") as? [String: Any] {
+        if let mixingConfigDic = Utils.getParamByKey(call: call, result: result, param: "mixingConfig") as? [String: Any] {
             mixingConfig = getTRTCStreamMixingConfigFromDic(mixingConfigDic: mixingConfigDic)
         }
 
@@ -1089,7 +1114,7 @@ class CloudManager {
     }
 
     public func stopPublishMediaStream(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let taskId = CommonUtils.getParamByKey(call: call, result: result, param: "taskId") as? String else { return }
+        guard let taskId = Utils.getParamByKey(call: call, result: result, param: "taskId") as? String else { return }
         txCloudManager.stopPublishMediaStream(taskId)
         result(nil)
     }
@@ -1334,17 +1359,17 @@ extension CloudManager {
     }
     
     public func setAudioFrameListener(call: FlutterMethodCall, result: @escaping FlutterResult) {
-        guard let isNullListener = CommonUtils.getParamByKey(call: call, result: result, param: "isNullListener") as? Bool else {
+        guard let isNullListener = Utils.getParamByKey(call: call, result: result, param: "isNullListener") as? Bool else {
             result(nil)
             return
         }
         
         if isNullListener {
             audioFrameListener = nil
-            TRTCCloud.sharedInstance().setAudioFrameDelegate(audioFrameListener)
+            txCloudManager.setAudioFrameDelegate(audioFrameListener)
         } else {
             audioFrameListener = AudioFrameListener(basicChannel: basicChannel)
-            TRTCCloud.sharedInstance().setAudioFrameDelegate(audioFrameListener)
+            txCloudManager.setAudioFrameDelegate(audioFrameListener)
         }
         result(nil)
     }

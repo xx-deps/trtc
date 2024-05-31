@@ -219,7 +219,10 @@ enum V2TXLivePixelFormat {
     V2TXLivePixelFormatI420,
 
     /// BGRA8888。
-    V2TXLivePixelFormatBGRA32
+    V2TXLivePixelFormatBGRA32,
+
+    /// RGBA32
+    V2TXLivePixelFormatRGBA32
 
 };
 
@@ -383,7 +386,10 @@ struct V2TXLivePusherStatistics {
     /// 【字段含义】从 SDK 到云端的往返延时（ms）
     int32_t rtt;
 
-    V2TXLivePusherStatistics() : appCpu(0), systemCpu(0), width(0), height(0), fps(0), videoBitrate(0), audioBitrate(0), rtt(0) {
+    /// 【字段含义】上行速度（kbps）
+    int32_t netSpeed;
+
+    V2TXLivePusherStatistics() : appCpu(0), systemCpu(0), width(0), height(0), fps(0), videoBitrate(0), audioBitrate(0), rtt(0), netSpeed(0) {
     }
 };
 
@@ -440,6 +446,9 @@ struct V2TXLivePlayerStatistics {
     /// 【字段含义】从 SDK 到云端的往返延时（ms），注：仅支持前缀为 [trtc://] 或 [webrtc://] 的播放地址。
     int32_t rtt;
 
+    /// 【字段含义】下载速度（kbps）
+    int32_t netSpeed;
+
     V2TXLivePlayerStatistics()
         : appCpu(0),
           systemCpu(0),
@@ -455,7 +464,8 @@ struct V2TXLivePlayerStatistics {
           audioBlockRate(0),
           videoTotalBlockTime(0),
           videoBlockRate(0),
-          rtt(0) {
+          rtt(0),
+          netSpeed(0) {
     }
 };
 
@@ -690,7 +700,7 @@ struct V2TXLiveScreenCaptureProperty {
     /// 是否开启高性能模式（只会在分享屏幕时会生效），开启后屏幕采集性能最佳，但无法过滤远端的高亮边框，默认为 true。
     bool enableHighPerformance;
 
-    /// 指定高亮边框颜色，RGB 格式，传入 0 时采用默认颜色，默认颜色为 #8CBF26。
+    /// 指定高亮边框颜色，RGB 格式，传入 0 时采用默认颜色，默认颜色为 #FFE640。
     int highlightBorderColor;
 
     /// 指定高亮边框的宽度，传入0时采用默认描边宽度，默认宽度为 5，最大值为 50。

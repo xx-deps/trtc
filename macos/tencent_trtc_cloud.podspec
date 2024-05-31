@@ -30,5 +30,5 @@ Pod::Spec.new do |s|
 
   s.public_header_files = 'Classes/**/*.h'
   # SDK 依赖
-  s.dependency 'TXLiteAVSDK_TRTC_Mac', '~> 11.4.14445'
+  s.dependency 'TXLiteAVSDK_TRTC_Mac', '~> 11.7.15304'
 end
