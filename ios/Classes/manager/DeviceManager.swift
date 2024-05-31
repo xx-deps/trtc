@@ -9,13 +9,18 @@ import Foundation
 import TXLiteAVSDK_Professional
 
 class DeviceManager {
-	private var txDeviceManager: TXDeviceManager = TRTCCloud.sharedInstance().getDeviceManager()
+	private var txDeviceManager: TXDeviceManager
 	
+    
+    init(cloud: TRTCCloud) {
+        txDeviceManager = cloud.getDeviceManager()
+    }
+    
 	/**
 	* 切换摄像头
 	*/
 	public func switchCamera(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let isFrontCamera = CommonUtils.getParamByKey(call: call, result: result, param: "isFrontCamera") as? Bool {
+		if let isFrontCamera = Utils.getParamByKey(call: call, result: result, param: "isFrontCamera") as? Bool {
 			txDeviceManager.switchCamera(isFrontCamera)
 			result(nil)
 		}
@@ -39,7 +44,7 @@ class DeviceManager {
 	* 设置摄像头缩放率
 	*/
 	public func setCameraZoomRatio(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let value = CommonUtils.getParamByKey(call: call, result: result, param: "value") as? String {
+		if let value = Utils.getParamByKey(call: call, result: result, param: "value") as? String {
 			let ret = txDeviceManager.setCameraZoomRatio(CGFloat(Int(Float(value)!)))
 			result(ret)
 		}
@@ -49,7 +54,7 @@ class DeviceManager {
 	* 设置摄像头缩放率
 	*/
 	public func enableCameraAutoFocus(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let enable = CommonUtils.getParamByKey(call: call, result: result, param: "enable") as? Bool {
+		if let enable = Utils.getParamByKey(call: call, result: result, param: "enable") as? Bool {
 			result(txDeviceManager.enableCameraAutoFocus(enable))
 		}
 	}
@@ -58,7 +63,7 @@ class DeviceManager {
 	* 设置摄像头闪光灯，开启后置摄像头才有效果
 	*/
 	public func enableCameraTorch(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let enable = CommonUtils.getParamByKey(call: call, result: result, param: "enable") as? Bool {
+		if let enable = Utils.getParamByKey(call: call, result: result, param: "enable") as? Bool {
 			txDeviceManager.enableCameraTorch(enable)
 			result(nil)
 		}
@@ -68,8 +73,8 @@ class DeviceManager {
 	* 设置对焦位置
 	*/
 	public func setCameraFocusPosition(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let x = CommonUtils.getParamByKey(call: call, result: result, param: "x") as? Int,
-		   let y = CommonUtils.getParamByKey(call: call, result: result, param: "y") as? Int {
+		if let x = Utils.getParamByKey(call: call, result: result, param: "x") as? Int,
+		   let y = Utils.getParamByKey(call: call, result: result, param: "y") as? Int {
 			txDeviceManager.setCameraFocusPosition(CGPoint(x: CGFloat(x), y: CGFloat(y)))
 			result(nil)
 		}
@@ -86,7 +91,7 @@ class DeviceManager {
 	* 设置通话时使用的系统音量类型
 	*/
 	public func setSystemVolumeType(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let type = CommonUtils.getParamByKey(call: call, result: result, param: "type") as? Int {
+		if let type = Utils.getParamByKey(call: call, result: result, param: "type") as? Int {
 			txDeviceManager.setSystemVolumeType(TXSystemVolumeType(rawValue: type)!)
 			result(nil)
 		}
@@ -96,7 +101,7 @@ class DeviceManager {
 	* 设置音频路由
 	*/
 	public func setAudioRoute(call: FlutterMethodCall, result: @escaping FlutterResult) {
-		if let route = CommonUtils.getParamByKey(call: call, result: result, param: "route") as? Int {
+		if let route = Utils.getParamByKey(call: call, result: result, param: "route") as? Int {
 			txDeviceManager.setAudioRoute(TXAudioRoute(rawValue: route)!)
 			result(nil)
 		}

@@ -31,7 +31,7 @@ Pod::Spec.new do |s|
 
   # SDK 依赖
   # s.dependency 'TXLiteAVSDK_Live', '9.9.11217'
-  s.dependency 'TXLiteAVSDK_Professional', '~> 11.4.14445'
+  s.dependency 'TXLiteAVSDK_Professional', '~> 11.7.15343'
   s.dependency 'TXCustomBeautyProcesserPlugin', '1.0.2'
 end
 

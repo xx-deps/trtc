@@ -5,7 +5,7 @@ import '../trtc_cloud_listener.dart';
 
 /// @nodoc
 class TRTCCloudListenerWeb {
-  void handleJsCallBack(evenType, dynamic params) {
+  void handleJsCallBack(evenType, dynamic params) async {
     String typeStr = evenType;
     TRTCCloudListener? type;
     for (var item in TRTCCloudListener.values) {
@@ -104,8 +104,9 @@ class TRTCCloudListenerWeb {
         case TRTCCloudListener.onTestSpeakerVolume:
           break;
       }
-      if (TRTCCloud.listener != null)
-        TRTCCloud.listener!.doCallBack(type, params);
+      TRTCCloud cloud = (await TRTCCloud.sharedInstance())!;
+      if (cloud.listener != null)
+        cloud.listener!.doCallBack(type, params);
     } catch (error) {
       print(error);
     }
