@@ -1,3 +1,8 @@
+## 2.7.9
+### Dependency Notes
+* Android SDK update to 11.8.0.14188
+* iOS SDK update to 11.8.15687
+
 ## 2.7.8
 ### Dependency Notes
 - Windows SDK update to 11.7.0.14863

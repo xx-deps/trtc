@@ -39,7 +39,7 @@ android {
 
     dependencies {
         api 'com.tencent.liteav:custom-video-processor:1.0.1'
-        api 'com.tencent.liteav:LiteAVSDK_Professional:11.7.0.13910'
+        api 'com.tencent.liteav:LiteAVSDK_Professional:11.8.0.14188'
         implementation 'com.google.code.gson:gson:2.8.9'
     }
 

@@ -33,7 +33,7 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # mp3 可以选择不打包，但是web一定要mp3文件
+  # MP3 can choose not to pack, but web must be mp3 file
   assets:
    - images/watermark_img.png
    - images/bg_main_title.png
