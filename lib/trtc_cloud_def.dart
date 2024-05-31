@@ -1732,3 +1732,296 @@ class TRTCAudioFrame {
   /// Extra data in audio frame, message sent by remote users through  `onLocalProcessedAudioFrame`  that add to audio frame will be callback through this field.
   Uint8List? extraData;
 }
+
+/// List of screen windows.
+class TRTCScreenCaptureSourceList {
+  /// Number of windows
+  int count = 0;
+
+  /// List of screen windows.
+  List<TRTCScreenCaptureSourceInfo> sourceInfo = [];
+
+  TRTCScreenCaptureSourceList({
+    required this.count,
+    required this.sourceInfo,
+  });
+
+  /// Convert [TRTCScreenCaptureSourceList] to Json format
+  List<Map<String, dynamic>> sourceInfoToJson() {
+    List<Map<String, dynamic>> listJson = [];
+    if (this.sourceInfo.isNotEmpty) {
+      for (var sourceInfo in this.sourceInfo) {
+        listJson.add(sourceInfo.toJson());
+      }
+    }
+    return listJson;
+  }
+
+  /// {@macro toJson}
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['count'] = this.count;
+    data['sourceInfo'] = sourceInfoToJson();
+    return data;
+  }
+
+  /// Parse the corresponding structure from Json
+  factory TRTCScreenCaptureSourceList.fromJson(Map<String?, dynamic> json) {
+    return TRTCScreenCaptureSourceList(
+      count: json['count'],
+      sourceInfo: List<TRTCScreenCaptureSourceInfo>.from(
+        json['sourceInfo'].map(
+          (x) {
+            Map<String, dynamic> xMap = (x as Map<Object?, Object?>).cast<String, dynamic>();
+            return TRTCScreenCaptureSourceInfo.fromJson(xMap);
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Target information for screen sharing (desktop only)
+/// 
+/// When users perform screen sharing, they can choose to capture the entire desktop or only the window of a certain program.
+/// 
+/// TRTCScreenCaptureSourceInfo is used to describe the information of the target to be shared, 
+/// including ID, name, thumbnail, etc. The field information in this structure is read-only.
+class TRTCScreenCaptureSourceInfo {
+  /// Collection source type (share the entire screen? Or share a window?).
+  TRTCScreenCaptureSourceType? type;
+
+  /// The ID of the collection source. 
+  /// 
+  /// For windows, this field represents the ID of the window; 
+  /// for screens, this field represents the ID of the monitor.
+  int? sourceId;
+
+  /// Collection source name (encoded in UTF8).
+  String? sourceName;
+
+  /// A thumbnail image of the share window.
+  TRTCImageBuffer? thumbBGRA;
+
+  /// A icon image of the share window.
+  TRTCImageBuffer? iconBGRA;
+
+  /// Whether the window is minimized.
+  bool? isMinimizeWindow;
+
+  /// Whether it is the main display (applicable to multiple monitors).
+  bool? isMainScreen;
+
+  /// Screen/window x coordinate, unit: pixel.
+  int? x;
+
+  /// Screen/window y coordinate, unit: pixel.
+  int? y;
+
+  /// Screen/window width, unit: pixels.
+  int? width;
+
+  /// Screen/window height, unit: pixels.
+  int? height;
+
+  TRTCScreenCaptureSourceInfo({
+    this.type,
+    this.sourceId,
+    this.sourceName,
+    this.thumbBGRA,
+    this.iconBGRA,
+    this.isMinimizeWindow,
+    this.isMainScreen,
+    this.x,
+    this.y,
+    this.width,
+    this.height,
+  });
+
+  /// {@macro toJson}
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['type'] = _fromEnumType(this.type!);
+    data['sourceId'] = this.sourceId;
+    data['sourceName'] = this.sourceName;
+    data['thumbBGRA'] = this.thumbBGRA?.toJson();
+    data['iconBGRA'] = this.iconBGRA?.toJson();
+    data['isMinimizeWindow'] = this.isMinimizeWindow;
+    data['isMainScreen'] = this.isMainScreen;
+    data['x'] = this.x;
+    data['y'] = this.y;
+    data['width'] = this.width;
+    data['height'] = this.height;
+    return data;
+  }
+
+  /// Parse the corresponding structure from Json
+  factory TRTCScreenCaptureSourceInfo.fromJson(Map<String, dynamic> json) {
+    Map<String, dynamic> thumbBGRAJson;
+    thumbBGRAJson = (json['thumbBGRA'] as Map<Object?, Object?>).cast<String, dynamic>();
+
+    Map<String, dynamic> iconBGRAJson;
+    iconBGRAJson = (json['iconBGRA'] as Map<Object?, Object?>).cast<String, dynamic>();
+    
+    return TRTCScreenCaptureSourceInfo(
+      type: _fromInt(json['type']),
+      sourceId: json['sourceId'],
+      sourceName: json['sourceName'],
+      thumbBGRA: TRTCImageBuffer.fromJson(thumbBGRAJson),
+      iconBGRA: TRTCImageBuffer.fromJson(iconBGRAJson),
+      isMinimizeWindow: json['isMinimizeWindow'],
+      isMainScreen: json['isMainScreen'],
+      x: json['x'],
+      y: json['y'],
+      width: json['width'],
+      height: json['height'],
+    );
+  }
+
+  static TRTCScreenCaptureSourceType _fromInt(int value) {
+    if (value == 0) {
+      return TRTCScreenCaptureSourceType.window;
+    } else if (value == 1) {
+      return TRTCScreenCaptureSourceType.screen;
+    } else if (value == 2) {
+      return TRTCScreenCaptureSourceType.custom;
+    } else {
+      return TRTCScreenCaptureSourceType.unknown;
+    }
+  }
+
+  static int _fromEnumType(TRTCScreenCaptureSourceType type) {
+    if (type == TRTCScreenCaptureSourceType.window) {
+      return 0;
+    } else if (type == TRTCScreenCaptureSourceType.screen) {
+      return 1;
+    } else if (type == TRTCScreenCaptureSourceType.custom) {
+      return 2;
+    } else if (type == TRTCScreenCaptureSourceType.unknown) {
+      return -1;
+    }
+    return -1;
+  }
+}
+
+/// Screen sharing target type (desktop only)
+enum TRTCScreenCaptureSourceType {
+  /// Not defined.
+  unknown,
+
+  /// The sharing target is a window of a certain application.
+  window,
+
+  /// The sharing target is the screen of a certain monitor.
+  screen,
+
+  /// The sharing target is a user-defined data source.
+  custom,
+}
+
+/// TRTC screen sharing icon information and mute image shim
+class TRTCImageBuffer {
+  /// The size of the image data.
+  int? length;
+
+  /// The width of the image.
+  int? width;
+
+  /// The height of the image.
+  int? height;
+
+  /// The content of image storage is generally a BGRA structure.
+  Uint8List? buffer;
+
+  TRTCImageBuffer({this.buffer, this.length, this.width, this.height});
+
+  /// {@macro toJson}
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['length'] = this.length;
+    data['width'] = this.width;
+    data['height'] = this.height;
+    if (this.buffer != null) {
+      data['buffer'] = this.buffer;
+    }
+    return data;
+  }
+
+  /// Parse the corresponding structure from Json
+  factory TRTCImageBuffer.fromJson(Map<String, dynamic> json) {
+    return TRTCImageBuffer(
+      buffer: Uint8List.fromList(json['buffer'].cast<int>()),
+      length: json['length'],
+      width: json['width'],
+      height: json['height'],
+    );
+  }
+}
+
+/// Advanced control parameters for screen sharing
+/// 
+/// This parameter is used in the screen sharing related interface [TRTCCloud.selectScreenCaptureTarget] to set a series of advanced control parameters when specifying the sharing target.
+/// 
+/// For example: whether to collect the mouse, whether to collect the sub-window, 
+/// whether to draw a border around the shared target, etc.
+class TRTCScreenCaptureProperty {
+  /// Whether to collect the mouse while collecting the target content, the default is true.
+  bool enableCaptureMouse;
+
+  /// Whether to highlight the window being shared (draw a border around the shared target), the default is true.
+  bool enableHighLight;
+
+  /// Whether to enable high-performance mode (will only take effect when sharing the screen), the default is true.
+  /// 
+  /// When enabled, the screen capture performance is the best, 
+  /// but the anti-occlusion ability will be lost. 
+  /// If you enable enableHighLight + enableHighPerformance at the same time, 
+  /// the remote user can see the highlighted border.
+  bool enableHighPerformance;
+
+  /// Specify the color of the highlight border in RGB format. 
+  /// When 0 is passed in, the default color is used. The default color is #FFE640.
+  int highLightColor;
+
+  /// Specify the width of the highlight border. When 0 is passed in, the default stroke width is used.
+  /// The default width is 5px, and the maximum value you can set is 50.
+  int highLightWidth;
+
+  /// Whether to collect sub-windows when collecting windows 
+  /// (the sub-window and the window being collected need to have Owner or Popup attributes), 
+  /// the default is false.
+  bool enableCaptureChildWindow;
+
+  TRTCScreenCaptureProperty({
+    this.enableCaptureMouse = true,
+    this.enableHighLight = true,
+    this.enableHighPerformance = true,
+    this.highLightColor = 0x000000,
+    this.highLightWidth = 0,
+    this.enableCaptureChildWindow = false,
+  });
+
+  /// {@macro toJson}
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['enableCaptureMouse'] = this.enableCaptureMouse;
+    data['enableHighLight'] = this.enableHighLight;
+    data['enableHighPerformance'] = this.enableHighPerformance;
+    data['highLightColor'] = this.highLightColor;
+    data['highLightWidth'] = this.highLightWidth;
+    data['enableCaptureChildWindow'] = this.enableCaptureChildWindow;
+    return data;
+  }
+
+  /// Parse the corresponding structure from Json
+  factory TRTCScreenCaptureProperty.fromJson(Map<String, dynamic> json) {
+    return TRTCScreenCaptureProperty(
+      enableCaptureMouse: json['enableCaptureMouse'],
+      enableHighLight: json['enableHighLight'],
+      enableHighPerformance: json['enableHighPerformance'],
+      highLightColor: json['highLightColor'],
+      highLightWidth: json['highLightWidth'],
+      enableCaptureChildWindow: json['enableCaptureChildWindow'],
+    );
+  }
+}

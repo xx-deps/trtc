@@ -199,6 +199,10 @@ void TencentTrtcCloudPlugin::HandleMethodCall(
     sdk_manager_->getBeautyManager(method_call, std::move(result));
   } else if(methodName.compare("getAudioEffectManager") == 0) {
     sdk_manager_->getAudioEffectManager(method_call, std::move(result));
+  } else if(methodName.compare("getScreenCaptureSources") == 0) {
+    sdk_manager_->getScreenCaptureSources(method_call, std::move(result));
+  } else if(methodName.compare("selectScreenCaptureTarget") == 0) {
+    sdk_manager_->selectScreenCaptureTarget(method_call, std::move(result));
   } else if(methodName.compare("startScreenCapture") == 0) {
     sdk_manager_->startScreenCapture(method_call, std::move(result));
   } else if(methodName.compare("stopScreenCapture") == 0) {

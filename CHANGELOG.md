@@ -1,3 +1,7 @@
+## 2.8.0
+### Feature
+- Windows: Newly added `getScreenCaptureSources` and `selectScreenCaptureTarget` API to support Windows screen sharing.
+
 ## 2.7.9
 ### Dependency Notes
 * Android SDK update to 11.8.0.14188

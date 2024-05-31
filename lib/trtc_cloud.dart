@@ -1186,6 +1186,56 @@ class TRTCCloud {
     });
   }
 
+  /// Enumerate shareable screens and windows (this interface only supports Windows)
+  /// 
+  /// When you connect the screen sharing function of the desktop system, 
+  /// you generally need to display an interface for selecting the sharing target, 
+  /// so that users can use this interface to choose whether to share the entire screen or a certain window.
+  /// 
+  /// Through this interface, you can query the ID, name and thumbnail of the windows available for sharing in the current system.
+  Future<TRTCScreenCaptureSourceList> getScreenCaptureSources({
+    required int thumbnailWidth,
+    required int thumbnailHeight,
+    required int iconWidth,
+    required int iconHeight,}) async {
+    dynamic sourceInfoResult = await _cloudChannel!.invokeMethod('getScreenCaptureSources', {
+      "thumbnailWidth": thumbnailWidth,
+      "thumbnailHeight": thumbnailHeight,
+      "iconWidth": iconWidth,
+      "iconHeight": iconHeight,
+    });
+    Map<String, dynamic> sourceInfoMap;
+    if (sourceInfoResult is Map<Object?, Object?>) {
+      sourceInfoMap = sourceInfoResult.cast<String, dynamic>();
+    } else {
+      throw Exception('Unexpected result type: ${sourceInfoResult.runtimeType}');
+    }
+    return TRTCScreenCaptureSourceList.fromJson(sourceInfoMap!);
+  }
+
+  /// Select the screen or window you want to share (this interface only supports Windows)
+  /// 
+  /// After you obtain the screens and windows that can be shared through [getScreenCaptureSources],
+  /// you can call this interface to select the target screen or window you want to share.
+  /// 
+  /// During the screen sharing process, 
+  /// you can also call this interface at any time to switch the sharing target.
+  Future<void> selectScreenCaptureTarget(TRTCScreenCaptureSourceInfo sourceInfo, TRTCScreenCaptureProperty property, {
+    int captureLeft = 0,
+    int captureTop = 0,
+    int captureRight = 0,
+    int captureBottom = 0,
+  }) async {
+    return await _cloudChannel!.invokeMethod('selectScreenCaptureTarget', {
+      "sourceInfo": sourceInfo.toJson(),
+      "property": property.toJson(),
+      "captureLeft": captureLeft,
+      "captureTop": captureTop,
+      "captureRight": captureRight,
+      "captureBottom": captureBottom,
+    });
+  }
+
   /// Start desktop screen sharing, grab what's on the user's screen and share it with other users in the same room
   ///
   /// **Parameters:**
@@ -1199,7 +1249,6 @@ class TRTCCloud {
   /// [Screen sharing](https://cloud.tencent.com/document/product/647/45751)
   ///
   /// **Platform not supported：**
-  /// - Windows
   /// - macOS
   Future<void> startScreenCapture(int streamType, TRTCVideoEncParam encParams,
       {String shareUserId = '',

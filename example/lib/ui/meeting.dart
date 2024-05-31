@@ -349,17 +349,34 @@ class MeetingPageState extends State<MeetingPage> with WidgetsBindingObserver {
           _meetModel.getUserInfo().isOpenCamera = true;
         });
       }
-    } else if (!kIsWeb && (Platform.isWindows || Platform.isMacOS)) {
+    } else if (!kIsWeb && Platform.isMacOS) {
       MeetingTool.toast(
           'The current platform does not support screen sharing.', context);
       return;
     } else {
-      await _startShare();
+      if (!_meetModel.getUserInfo().isShowingWindow) {
+        TRTCScreenCaptureSourceList list = await _trtcCloud.getScreenCaptureSources(thumbnailWidth: 100, thumbnailHeight: 100, iconWidth: 100, iconHeight: 100);
+        await _trtcCloud.selectScreenCaptureTarget(list.sourceInfo[1], TRTCScreenCaptureProperty());
+        await _startShare();
+        this.setState(() {
+          _meetModel.getUserInfo().isShowingWindow = true;
+          _meetModel.getUserInfo().isOpenCamera = false;
+        });
+      } else {
+        await _trtcCloud.stopScreenCapture();
+        _userList[0].isOpenCamera = true;
+        _trtcCloud.startLocalPreview(
+            _meetModel.getUserInfo().isFrontCamera, _meetModel.getUserInfo().localViewId);
+        this.setState(() {
+          _meetModel.getUserInfo().isShowingWindow = false;
+          _meetModel.getUserInfo().isOpenCamera = true;
+        });
+      }
       //The screen sharing function can only be tested on the real machine
-      ReplayKitLauncher.launchReplayKitBroadcast(iosExtensionName);
-      this.setState(() {
-        _meetModel.getUserInfo().isOpenCamera = false;
-      });
+      // ReplayKitLauncher.launchReplayKitBroadcast(iosExtensionName);
+      // this.setState(() {
+      //   _meetModel.getUserInfo().isOpenCamera = false;
+      // });
     }
   }
 
