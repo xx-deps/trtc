@@ -111,7 +111,7 @@ class TencentTRTCCloudWeb {
         _trtcCloudWrapper!.exitRoom();
         return Future.value(true);
       case "switchRole":
-        _trtcCloudWrapper!.switchRoom(args);
+        _trtcCloudWrapper!.switchRole(args);
         return Future.value(true);
       case "stopLocalPreview":
         _trtcCloudWrapper!.stopLocalPreview(args);

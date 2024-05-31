@@ -66,6 +66,7 @@ export default class TrtcWrapper {
       const streamId = getFlutterArgs(param, 'streamId');
       const userDefineRecordId = getFlutterArgs(param, 'userDefineRecordId');
       const privateMapKey = getFlutterArgs(param, 'privateMapKey');
+      const scene = getFlutterArgs(param, 'scene');
       const enterRoomParams = {
         userId,
         sdkAppId,
@@ -77,7 +78,7 @@ export default class TrtcWrapper {
         userDefineRecordId,
         privateMapKey,
       };
-      await this._trtcCloud?.enterRoom(enterRoomParams);
+      await this._trtcCloud?.enterRoom(enterRoomParams, scene);
     } catch (error) {
       // ……
     }

@@ -154,6 +154,11 @@ void SDKManager::setMixTranscodingConfig(const flutter::MethodCall<flutter::Enco
         auto configParam = std::get<std::string>(methodParams[flutter::EncodableValue("config")]);
         Document configDo;
         configDo.Parse(configParam.c_str());
+        if(configDo.IsNull()) {
+            trtc_cloud->setMixTranscodingConfig(nullptr);
+            result->Success(nullptr);
+            return;
+        }
 
         TRTCTranscodingConfig config;
         if(!(configDo["appId"].IsNull())) {

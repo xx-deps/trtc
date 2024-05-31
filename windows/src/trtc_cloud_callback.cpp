@@ -387,32 +387,6 @@ class TRTCCloudCallbackImpl : public ITRTCCloudCallback
             params[string("params")] = (int)volume;
             method_channel_->InvokeMethod(LISTENER_FUNC_NAME, std::make_unique<EncodableValue>(params));
         }
-
-                void onRecvCustomCmdMsg(const char* userId, int32_t cmdID, uint32_t seq, const uint8_t* message, uint32_t messageSize) {
-            EncodableMap values;
-            values[string("userId")] = userId;
-            values[string("cmdID")] = cmdID;
-            values[string("seq")] = (int)seq;
-            std::string messageStr(message, message + messageSize);
-            values[string("message")] = messageStr;
-            values[string("messageSize")] = (int)messageSize;
-            EncodableMap params;
-            params[string("type")] = "onRecvCustomCmdMsg";
-            params[string("params")] = values;
-            method_channel_->InvokeMethod(LISTENER_FUNC_NAME, std::make_unique<EncodableValue>(params));
-        }
-
-         void onMissCustomCmdMsg(const char* userId, int32_t cmdID, int errCode, int missed) {
-            EncodableMap values;
-            values[string("userId")] = userId;
-            values[string("cmdID")] = cmdID;
-            values[string("errCode")] = errCode;
-            values[string("missed")] = missed;
-            EncodableMap params;
-            params[string("type")] = "onMissCustomCmdMsg";
-            params[string("params")] = values;
-            method_channel_->InvokeMethod(LISTENER_FUNC_NAME, std::make_unique<EncodableValue>(params));
-        }
 };
 
 class TXMusicPlayObserverImpl : public ITXMusicPlayObserver {
@@ -456,7 +430,30 @@ class TXMusicPlayObserverImpl : public ITXMusicPlayObserver {
             method_channel_->InvokeMethod(LISTENER_FUNC_NAME, std::make_unique<EncodableValue>(params));
         }
 
+        void onRecvCustomCmdMsg(const char* userId, int32_t cmdID, uint32_t seq, const uint8_t* message, uint32_t messageSize) {
+            EncodableMap values;
+            values[string("userId")] = userId;
+            values[string("cmdID")] = cmdID;
+            values[string("seq")] = (int)seq;
+            values[string("message")] = message;
+            values[string("messageSize")] = (int)messageSize;
+            EncodableMap params;
+            params[string("type")] = "onRecvCustomCmdMsg";
+            params[string("params")] = values;
+            method_channel_->InvokeMethod(LISTENER_FUNC_NAME, std::make_unique<EncodableValue>(params));
+        }
 
+         void onMissCustomCmdMsg(const char* userId, int32_t cmdID, int errCode, int missed) {
+            EncodableMap values;
+            values[string("userId")] = userId;
+            values[string("cmdID")] = cmdID;
+            values[string("errCode")] = errCode;
+            values[string("missed")] = missed;
+            EncodableMap params;
+            params[string("type")] = "onMissCustomCmdMsg";
+            params[string("params")] = values;
+            method_channel_->InvokeMethod(LISTENER_FUNC_NAME, std::make_unique<EncodableValue>(params));
+        }
 
 };
 }
