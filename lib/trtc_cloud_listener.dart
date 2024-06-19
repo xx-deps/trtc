@@ -549,6 +549,22 @@ enum TRTCCloudListener {
   /// `taskId`: If a request is successful, a task ID will be returned via the callback. You need to provide this task ID when you call [TRTCCloud.updatePublishMediaStream] to modify publishing parameters or [TRTCCloud.stopPublishMediaStream] to stop publishing.
   /// <br> <br> <br>
   onStopPublishMediaStream,
+
+  /// The audio route changed (for mobile devices only)
+  /// 
+  /// Audio route is the route (speaker or receiver) through which audio is played.
+  /// - When audio is played through the receiver, the volume is relatively low, and the sound can be heard only when the phone is put near the ear. This mode has a high level of privacy and is suitable for answering calls.
+  /// - When audio is played through the speaker, the volume is relatively high, and there is no need to put the phone near the ear. This mode enables the "hands-free" feature.
+  /// - When audio is played through the wired earphone.
+  /// - When audio is played through the bluetooth earphone.
+  /// - When audio is played through the USB sound card.
+  /// 
+  /// *Parameters:*
+  /// 
+  /// `route`: Audio route, i.e., the route (speaker or receiver) through which audio is played
+  /// 
+  /// `fromRoute`: The audio route used before the change
+  onAudioRouteChanged,
 }
 
 /// @nodoc
