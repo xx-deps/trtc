@@ -409,8 +409,8 @@ public class CustomTRTCCloudListener extends TRTCCloudListener {
     public void onAudioRouteChanged(int i, int i1) {
         super.onAudioRouteChanged(i, i1);
         Map<String, Object> params = new HashMap();
-        params.put("newRoute", i);
-        params.put("oldRoute", i1);
+        params.put("route", i);
+        params.put("fromRoute", i1);
         this.invokeListener(CallBackNoticeEnum.onAudioRouteChanged, params);
     }
 

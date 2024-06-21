@@ -254,7 +254,7 @@ class Listener: NSObject, TRTCCloudDelegate {
 	* 音频路由发生变化（仅 iOS），音频路由即声音由哪里输出（扬声器或听筒）
 	*/
 	 func onAudioRouteChanged(_ route: TRTCAudioRoute, from fromRoute: TRTCAudioRoute) {
-		TencentTRTCCloud.invokeListener(channel: channel, type: ListenerType.onAudioRouteChanged, params: ["newRoute": route.rawValue, "oldRoute": fromRoute.rawValue])
+		TencentTRTCCloud.invokeListener(channel: channel, type: ListenerType.onAudioRouteChanged, params: ["route": route.rawValue, "fromRoute": fromRoute.rawValue])
 	}
 	
 	

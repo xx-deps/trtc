@@ -363,9 +363,9 @@ class TRTCCloudCallbackImpl : public ITRTCCloudCallback
             method_channel_->InvokeMethod(LISTENER_FUNC_NAME, std::make_unique<EncodableValue>(params));
         }
 
-        void onDeviceChange(const char* device_id, int type, int state){
+        void onDeviceChange(const char* deviceId, TRTCDeviceType type, TRTCDeviceState state){
             EncodableMap values;
-            values[string("device_id")] = device_id;
+            values[string("deviceId")] = deviceId;
             values[string("type")] = type;
             values[string("state")] = state;
             EncodableMap params;

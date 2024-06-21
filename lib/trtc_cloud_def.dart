@@ -333,6 +333,15 @@ class TRTCCloudDef {
   /// Headphones
   static final int TRTC_AUDIO_ROUTE_EARPIECE = 1;
 
+  /// WiredHeadset
+  static final int TRTC_AUDIO_ROUTE_WIREDHEADSET = 2;
+
+  /// BluetoothHeadset
+  static final int TRTC_AUDIO_ROUTE_BLUETOOTHHEADSET = 3;
+
+  /// SoundCard
+  static final int TRTC_AUDIO_ROUTE_SOUNDCARD = 4;
+
   /*
      * @name 3.4. Audio reverb mode
      */
